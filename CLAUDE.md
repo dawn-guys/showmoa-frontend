@@ -59,3 +59,11 @@ After finishing:
 
 Write documentation and code comments in English.
 Respond to the user in Korean.
+
+## Design Source
+
+- Figma is the source for layout, spacing, color, and typography. docs/spec is the source for behavior and copy. If they conflict, stop and ask.
+- Map Figma values to tokens in globals.css. Never hardcode hex or px that a token covers; report missing tokens.
+- Do not copy Figma frame widths; follow the app container.
+- Icons come from @solar-icons/react or lucide-react. Do not inline SVGs exported from Figma.
+- Work on one Figma frame (node link) at a time.

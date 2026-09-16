@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const pretendard = localFont({
   src: "./fonts/PretendardVariable.woff2",
@@ -29,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="bg-neutral-100 font-sans text-foreground antialiased">
         {/* fixed descendants (bottom nav, toasts) rely on this element having no transform */}
         <div className="mx-auto min-h-dvh w-full max-w-app min-w-[320px] bg-background">
-          {children}
+          <Providers>{children}</Providers>
         </div>
       </body>
     </html>
