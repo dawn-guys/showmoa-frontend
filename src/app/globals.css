@@ -7,8 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans:
+    var(--font-pretendard), -apple-system, BlinkMacSystemFont, system-ui,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -46,6 +47,24 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@theme {
+  /* App column width. Used by the root container and every fixed element. */
+  --container-app: 480px; /* max-w-app */
+
+  /* Bottom navigation bar height. Confirm against the Figma design. */
+  --spacing-bottom-nav: 56px; /* h-bottom-nav, pb-bottom-nav */
+}
+
+/* Safe area below the home indicator. Use on bottom-anchored fixed UI. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Bottom nav height + safe area. Use on page content above the bottom nav. */
+@utility pb-safe-nav {
+  padding-bottom: calc(var(--spacing-bottom-nav) + env(safe-area-inset-bottom));
 }
 
 :root {
@@ -123,8 +142,31 @@
   }
   body {
     @apply bg-background text-foreground;
+    overscroll-behavior: none;
+    word-break: keep-all;
   }
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    color-scheme: light;
+  }
+
+  /* Reset iOS form styles. Checkbox and radio are excluded so native
+     controls stay visible.
+     Note: this removes the native select arrow. A native <select> needs
+     its own arrow icon. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  button {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 0;
+  }
+
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
   }
 }
