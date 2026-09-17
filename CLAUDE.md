@@ -68,3 +68,41 @@ Respond to the user in Korean.
 - Do not copy Figma frame widths; follow the app container.
 - Icons come from @solar-icons/react or lucide-react. Do not inline SVGs exported from Figma.
 - Work on one Figma frame (node link) at a time.
+
+## Git
+
+### Commits
+
+- Format: `<type>: <description>`. The type is English, the description is
+  always Korean. Never write the description in English.
+- Types: feat (기능 추가), fix (버그 수정), ui (동작 없는 마크업·스타일),
+  refactor (동작 변화 없는 구조 개선), chore (설정·패키지·빌드), docs (문서).
+- Atomic: one commit, one purpose. Do not mix unrelated changes.
+  If a change genuinely spans several things, say so honestly in the message
+  instead of forcing a split.
+- Description: state plainly what was done, in noun or past form
+  (추가, 수정). No trailing period.
+  Example: `ui: 목록 카드 레이아웃 조정`
+- Run typecheck and lint before committing.
+
+### Branches
+
+- Format: `<type>/<작업-내용>`, using the same types as commits.
+  The work part is Korean, words joined with hyphens. Keep it short and specific.
+  Example: `feat/공연-목록`, `fix/지도-마커`
+- main always stays deployable. There is no develop branch.
+- Before starting a task, check the current branch. If it is main, or
+  unrelated to this task, create a new branch from the latest main and tell
+  me the name. If I already made changes on main, carry them over with
+  `git switch -c <branch>` — never stash or discard them.
+
+### Pull requests
+
+- Base is main. Title and body in Korean: what changed, why, how to verify,
+  and the related docs/spec file.
+- After a PR is merged, delete the branch.
+
+### Rules for Claude
+
+- Commit, push, and open PRs only when I ask. Never do it automatically.
+- Show me the commit message and PR body before creating them.
