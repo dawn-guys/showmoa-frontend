@@ -7,8 +7,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-placeholder: var(--placeholder);
+  --color-disabled: var(--disabled);
+  --color-hint: var(--hint);
+  --font-sans:
+    var(--font-pretendard), -apple-system, BlinkMacSystemFont, system-ui,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -48,73 +52,100 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+@theme {
+  /* App column width. Used by the root container and every fixed element. */
+  --container-app: 480px; /* max-w-app */
+
+  /* Bottom navigation bar height. Confirm against the Figma design. */
+  --spacing-bottom-nav: 56px; /* h-bottom-nav, pb-bottom-nav */
+
+  /* Mobile typography scale from the Figma design system.
+     Line height, weight, and letter spacing are not in the design doc;
+     these are agreed defaults (headings 1.4, body 1.5; H 600, body 400;
+     tracking tightened for Korean). body1 (14px) is intentionally omitted
+     for now. The default Tailwind text-* scale is kept alongside these. */
+  /* 줄간격·굵기·자간은 디자인 확정 전 기본값이다. 화면 작업을 진행하며 조정한다. */
+  --text-h1: 1.25rem; /* 20px */
+  --text-h1--line-height: 1.4;
+  --text-h1--font-weight: 600;
+  --text-h1--letter-spacing: -0.02em;
+
+  --text-h2: 1.125rem; /* 18px */
+  --text-h2--line-height: 1.4;
+  --text-h2--font-weight: 600;
+  --text-h2--letter-spacing: -0.02em;
+
+  --text-body2: 1rem; /* 16px */
+  --text-body2--line-height: 1.5;
+  --text-body2--font-weight: 400;
+  --text-body2--letter-spacing: -0.01em;
+
+  --text-body3: 0.75rem; /* 12px */
+  --text-body3--line-height: 1.5;
+  --text-body3--font-weight: 400;
+  --text-body3--letter-spacing: -0.01em;
+
+  --text-body4: 0.625rem; /* 10px */
+  --text-body4--line-height: 1.5;
+  --text-body4--font-weight: 400;
+  --text-body4--letter-spacing: -0.01em;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Safe area below the home indicator. Use on bottom-anchored fixed UI. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Bottom nav height + safe area. Use on page content above the bottom nav. */
+@utility pb-safe-nav {
+  padding-bottom: calc(var(--spacing-bottom-nav) + env(safe-area-inset-bottom));
+}
+
+/* show moa is a single dark theme. :root carries the dark values directly
+   (started from shadcn's .dark block, then overridden with the design
+   system tokens below). No light theme and no theme switching. */
+:root {
+  --background: #121212;
+  --foreground: #f6f6f6;
+  --card: #171717;
+  --card-foreground: #f6f6f6;
+  --popover: #171717;
+  --popover-foreground: #f6f6f6;
+  /* Primary is the design system's "주조색" referenced throughout docs/spec
+     (input focus border, selected filter, calendar today highlight). */
+  --primary: #ff5126;
+  /* #121212 over #ff5126 = 5.76:1 vs #f6f6f6 = 3.01:1; the darker one wins. */
+  --primary-foreground: #121212;
+  --secondary: #262626;
+  --secondary-foreground: #f6f6f6;
+  --muted: #262626;
+  --muted-foreground: #888888;
+  --accent: #262626;
+  --accent-foreground: #f6f6f6;
+  --destructive: #ff0000;
+  --border: #ffffff1a;
+  --input: #ffffff26;
+  /* Focus ring reuses the 주조색. */
+  --ring: #ff5126;
+  --chart-1: #d4d4d4;
+  --chart-2: #737373;
+  --chart-3: #525252;
+  --chart-4: #404040;
+  --chart-5: #262626;
+  --radius: 0.625rem;
+  /* Text tokens with no shadcn counterpart. All #5E5E5E today but kept
+     separate because their purposes differ. */
+  --placeholder: #5e5e5e;
+  --disabled: #5e5e5e;
+  --hint: #5e5e5e;
+  --sidebar: #171717;
+  --sidebar-foreground: #f6f6f6;
+  --sidebar-primary: #1447e6;
+  --sidebar-primary-foreground: #f6f6f6;
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #f6f6f6;
+  --sidebar-border: #ffffff1a;
+  --sidebar-ring: #ff5126;
 }
 
 @layer base {
@@ -122,9 +153,34 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    /* body2 (16px) is the default: inputs inherit it and clear the 16px
+       minimum that prevents iOS auto-zoom (mobile.md). */
+    @apply bg-background text-body2 text-foreground;
+    overscroll-behavior: none;
+    word-break: keep-all;
   }
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    color-scheme: dark;
+  }
+
+  /* Reset iOS form styles. Checkbox and radio are excluded so native
+     controls stay visible.
+     Note: this removes the native select arrow. A native <select> needs
+     its own arrow icon. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  button {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 0;
+  }
+
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
   }
 }

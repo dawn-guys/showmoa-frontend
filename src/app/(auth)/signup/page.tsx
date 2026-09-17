@@ -1,0 +1,8 @@
+// PLACEHOLDER: screen not implemented. See docs/spec/auth.md
+export default function SignupPage() {
+  return (
+    <main>
+      <h1>Signup</h1>
+    </main>
+  );
+}
