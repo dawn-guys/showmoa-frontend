@@ -20,14 +20,15 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover", // required for env(safe-area-inset-*)
-  themeColor: "#ffffff",
+  themeColor: "#121212",
   interactiveWidget: "resizes-content", // Android Chrome: shrink layout when keyboard opens
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={pretendard.variable}>
-      <body className="bg-neutral-100 font-sans text-foreground antialiased">
+      {/* black gutter behind the app column so #121212 stands out above 480px */}
+      <body className="bg-black font-sans text-foreground antialiased">
         {/* fixed descendants (bottom nav, toasts) rely on this element having no transform */}
         <div className="mx-auto min-h-dvh w-full max-w-app min-w-[320px] bg-background">
           <Providers>{children}</Providers>

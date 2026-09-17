@@ -57,7 +57,8 @@ After finishing:
 
 ## Communication
 
-Write documentation and code comments in English.
+Write code comments in Korean.
+Keep documentation (blueprint.md, phase.md, .claude/rules/*) in English.
 Respond to the user in Korean.
 
 ## Design Source

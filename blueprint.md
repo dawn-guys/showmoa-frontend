@@ -160,6 +160,10 @@ reuse need, and state ownership.
 - Do not split components merely to reduce file length.
 - Forms use React Hook Form + Zod.
 
+## Theme
+
+show moa is a single dark theme. There is no light theme and no theme switching.
+
 ## Mobile-Only Layout
 
 show moa is a mobile-only web app. There is no tablet or desktop layout.
