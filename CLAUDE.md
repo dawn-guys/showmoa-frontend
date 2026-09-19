@@ -106,3 +106,6 @@ Respond to the user in Korean.
 
 - Commit, push, and open PRs only when I ask. Never do it automatically.
 - Show me the commit message and PR body before creating them.
+- Write all responses in Korean, including intermediate progress messages.
+- Keep code, commands, and file names in their original form.
+- For error messages, show the original text along with a Korean translation/explanation.
