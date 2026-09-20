@@ -5,8 +5,8 @@ import type {
   RankedPerformance,
 } from "@/app/(tabs)/_types";
 
-// 목업 포스터 경로. 실제 에셋 연동 전까지 렌더되지 않는 자리표시자다.
-const poster = (seed: string) => `/mock/posters/${seed}.jpg`;
+// MOCK: 실제 포스터 에셋 연동 전까지 사용하는 자리표시 이미지(picsum, 세로형).
+const poster = (seed: string) => `https://picsum.photos/seed/${seed}/600/800`;
 
 // MOCK: 주목받는 공연 1개. Phase 2에서 실제 추천 공연으로 교체한다.
 export const MOCK_FEATURED_PERFORMANCE: FeaturedPerformance = {

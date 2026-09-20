@@ -30,6 +30,7 @@ export function HorizontalPerformanceList({
             id={performance.id}
             title={performance.title}
             genre={performance.genre}
+            posterUrl={performance.posterUrl}
             statusLabel={getPerformanceStatusLabel(performance)}
           />
         </li>
