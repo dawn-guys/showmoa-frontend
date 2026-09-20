@@ -181,9 +181,10 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
 // MOCK: 좋아요한 공연. MOCK_LIKED_EMPTY=true로 바꾸면 빈 목록(빈 상태) 확인.
 export const MOCK_LIKED_EMPTY = false;
 export const MOCK_LIKED_PERFORMANCES: PerformanceSummary[] = [
-  MOCK_CATEGORY_PERFORMANCES[1], // 긴 제목
+  MOCK_CATEGORY_PERFORMANCES[1], // 긴 제목(말줄임) + 진행 중
+  MOCK_CATEGORY_PERFORMANCES[3], // 예정(D-day 뱃지)
   MOCK_CATEGORY_PERFORMANCES[2], // 공연 종료
-  MOCK_CATEGORY_PERFORMANCES[5],
+  MOCK_CATEGORY_PERFORMANCES[5], // 진행 중
 ];
 
 // MOCK: 오늘 캘린더 공연. MOCK_TODAY_EMPTY=true로 바꾸면 빈 목록 확인.

@@ -13,7 +13,15 @@ export function FeaturedSection() {
   return (
     <section aria-label="주목받는 공연" aria-busy={isLoading} className="px-4">
       {isLoading ? (
-        <Skeleton className="aspect-square w-full rounded-xl" aria-hidden />
+        // 정보(제목·위치·장르) + 포스터 순서/간격을 로드 후와 맞춘다
+        <div className="flex flex-col gap-[30px]" aria-hidden>
+          <div className="flex flex-col gap-2.5">
+            <Skeleton className="h-[22px] w-3/4 rounded-md" />
+            <Skeleton className="h-4 w-1/2 rounded-md" />
+            <Skeleton className="h-5 w-12 rounded-full" />
+          </div>
+          <Skeleton className="aspect-[345/300] w-full rounded-xl" />
+        </div>
       ) : (
         <div className="rounded-xl border border-border p-4 text-body3 text-muted-foreground">
           [주목받는 공연] {data?.title}

@@ -42,7 +42,9 @@ export function PerformanceCard({
             />
           )}
           {statusLabel && (
-            <Badge className="absolute top-2 left-2">{statusLabel}</Badge>
+            <Badge className="absolute top-2 left-2 text-foreground">
+              {statusLabel}
+            </Badge>
           )}
         </div>
         <h3 className="truncate text-body3 font-medium text-foreground">

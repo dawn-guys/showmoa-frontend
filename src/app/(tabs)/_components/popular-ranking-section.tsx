@@ -20,7 +20,7 @@ export function PopularRankingSection() {
         인기 있는 공연 순위
       </h2>
       {isLoading ? (
-        <div className="flex flex-col gap-4" aria-hidden>
+        <div className="flex flex-col gap-5" aria-hidden>
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-[50px] w-full rounded-lg" />
           ))}
