@@ -2,7 +2,6 @@
 import type {
   FeaturedPerformance,
   PerformanceSummary,
-  RankedPerformance,
 } from "@/app/(tabs)/_types";
 
 // MOCK: 실제 포스터 에셋 연동 전까지 사용하는 자리표시 이미지(picsum, 세로형).
@@ -18,12 +17,13 @@ export const MOCK_FEATURED_PERFORMANCE: FeaturedPerformance = {
   startDate: "2026-09-10T19:30:00+09:00",
   endDate: "2026-10-10T21:00:00+09:00",
   status: "ongoing",
+  likeCount: 690,
 };
 
-// MOCK: 인기 공연 순위 5개. rank 2는 긴 제목(말줄임) 엣지 케이스.
-export const MOCK_POPULAR_RANKING: RankedPerformance[] = [
+// MOCK: 인기 순위 후보 공연들. 순위는 usePopularRanking에서 likeCount로 산정한다.
+//  - popular-2는 긴 제목(말줄임) 엣지 케이스.
+export const MOCK_POPULAR_CANDIDATES: PerformanceSummary[] = [
   {
-    rank: 1,
     id: "popular-1",
     title: "위코딩 4기 취업 기반 스터디 웹 개발 모임",
     posterUrl: poster("popular-1"),
@@ -32,9 +32,9 @@ export const MOCK_POPULAR_RANKING: RankedPerformance[] = [
     startDate: "2026-09-01T10:00:00+09:00",
     endDate: "2026-12-01T18:00:00+09:00",
     status: "ongoing",
+    likeCount: 1580,
   },
   {
-    rank: 2,
     id: "popular-2",
     title:
       "주방에서 다 같이 모여서 배우는 해피해피 쿠킹 클래스 시즌2 스페셜 에디션",
@@ -44,9 +44,9 @@ export const MOCK_POPULAR_RANKING: RankedPerformance[] = [
     startDate: "2026-09-15T14:00:00+09:00",
     endDate: "2026-11-15T17:00:00+09:00",
     status: "ongoing",
+    likeCount: 1421,
   },
   {
-    rank: 3,
     id: "popular-3",
     title: "쉽게 배우는 꽃꽂이 플라워링 4기",
     posterUrl: poster("popular-3"),
@@ -55,9 +55,9 @@ export const MOCK_POPULAR_RANKING: RankedPerformance[] = [
     startDate: "2026-10-01T11:00:00+09:00",
     endDate: null,
     status: "upcoming",
+    likeCount: 1203,
   },
   {
-    rank: 4,
     id: "popular-4",
     title: "보드잼 4기 21회차 ( 전략 게임 )",
     posterUrl: poster("popular-4"),
@@ -66,9 +66,9 @@ export const MOCK_POPULAR_RANKING: RankedPerformance[] = [
     startDate: "2026-09-20T13:00:00+09:00",
     endDate: "2026-09-20T18:00:00+09:00",
     status: "ongoing",
+    likeCount: 998,
   },
   {
-    rank: 5,
     id: "popular-5",
     title: "밴드 음악 클래스 고밴드에서 가르치는 보컬 트레이닝",
     posterUrl: poster("popular-5"),
@@ -77,6 +77,7 @@ export const MOCK_POPULAR_RANKING: RankedPerformance[] = [
     startDate: "2026-09-25T19:00:00+09:00",
     endDate: "2026-10-25T21:00:00+09:00",
     status: "upcoming",
+    likeCount: 842,
   },
 ];
 
@@ -94,6 +95,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-01-05T20:00:00+09:00",
     endDate: null,
     status: "ongoing",
+    likeCount: 512,
   },
   {
     id: "category-long",
@@ -105,6 +107,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-09-18T19:30:00+09:00",
     endDate: "2026-11-30T22:00:00+09:00",
     status: "ongoing",
+    likeCount: 733,
   },
   {
     id: "category-ended",
@@ -115,6 +118,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-07-01T18:00:00+09:00",
     endDate: "2026-08-31T21:00:00+09:00",
     status: "ended",
+    likeCount: 640,
   },
   {
     id: "category-4",
@@ -125,6 +129,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-11-24T19:00:00+09:00",
     endDate: "2026-11-25T22:00:00+09:00",
     status: "upcoming",
+    likeCount: 805,
   },
   {
     id: "category-5",
@@ -135,6 +140,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-09-14T20:00:00+09:00",
     endDate: "2026-09-14T22:00:00+09:00",
     status: "ended",
+    likeCount: 210,
   },
   {
     id: "category-6",
@@ -145,6 +151,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-09-05T19:30:00+09:00",
     endDate: "2026-12-20T22:00:00+09:00",
     status: "ongoing",
+    likeCount: 588,
   },
   {
     id: "category-7",
@@ -155,6 +162,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-12-28T20:00:00+09:00",
     endDate: "2027-02-28T22:00:00+09:00",
     status: "upcoming",
+    likeCount: 176,
   },
   {
     id: "category-8",
@@ -165,6 +173,7 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2026-12-18T15:00:00+09:00",
     endDate: "2026-12-25T20:00:00+09:00",
     status: "upcoming",
+    likeCount: 302,
   },
   {
     id: "category-9",
@@ -175,7 +184,15 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
     startDate: "2027-01-01T15:00:00+09:00",
     endDate: null,
     status: "upcoming",
+    likeCount: 143,
   },
+];
+
+// MOCK: 전체 공연 풀. 인기 순위는 이 목록에서 likeCount 기준으로 산정한다.
+export const MOCK_ALL_PERFORMANCES: PerformanceSummary[] = [
+  MOCK_FEATURED_PERFORMANCE,
+  ...MOCK_POPULAR_CANDIDATES,
+  ...MOCK_CATEGORY_PERFORMANCES,
 ];
 
 // MOCK: 좋아요한 공연. MOCK_LIKED_EMPTY=true로 바꾸면 빈 목록(빈 상태) 확인.
@@ -190,6 +207,6 @@ export const MOCK_LIKED_PERFORMANCES: PerformanceSummary[] = [
 // MOCK: 오늘 캘린더 공연. MOCK_TODAY_EMPTY=true로 바꾸면 빈 목록 확인.
 export const MOCK_TODAY_EMPTY = false;
 export const MOCK_TODAY_PERFORMANCES: PerformanceSummary[] = [
-  MOCK_POPULAR_RANKING[3], // 오늘(2026-09-20) 진행
+  MOCK_POPULAR_CANDIDATES[3], // 오늘(2026-09-20) 진행
   MOCK_CATEGORY_PERFORMANCES[0], // 오픈런
 ];

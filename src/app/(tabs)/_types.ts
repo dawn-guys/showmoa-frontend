@@ -24,6 +24,8 @@ export interface PerformanceSummary {
   /** 공연 종료일 (ISO 8601). 오픈런이면 null */
   endDate: string | null;
   status: PerformanceStatus;
+  /** 좋아요(찜) 수. 인기 순위 산정 기준. */
+  likeCount: number;
 }
 
 /** 주목받는 공연 (홈 상단 배너 1개) */
