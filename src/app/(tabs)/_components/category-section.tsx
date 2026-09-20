@@ -11,7 +11,7 @@ import { CategoryCard } from "./category-card";
 
 // 2행 가로 스크롤 그리드. 카드가 영역을 넘으면 스와이프로 넘긴다.
 const gridClassName =
-  "grid grid-flow-col grid-rows-2 auto-cols-[9rem] gap-x-[15px] gap-y-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  "grid grid-flow-col grid-rows-2 auto-cols-[91px] gap-x-[18px] gap-y-5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 /**
  * 공연 카테고리 섹션(로그인·비로그인 공용). 제목 옆 장르 탭을 누르면 해당

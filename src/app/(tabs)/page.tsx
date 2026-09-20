@@ -1,5 +1,5 @@
 import { Header } from "@/app/_components/header";
-import { SiteFooter } from "@/shared/components/site-footer";
+import { SiteFooter } from "@/app/_components/site-footer";
 import { HomeSections } from "./_components/home-sections";
 
 // See docs/spec/home.md

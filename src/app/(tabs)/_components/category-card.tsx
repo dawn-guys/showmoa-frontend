@@ -22,11 +22,11 @@ export function CategoryCard({
           src={performance.posterUrl}
           alt=""
           fill
-          sizes="144px"
+          sizes="91px"
           className="object-cover"
         />
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <h3 className="truncate text-sm font-medium text-foreground">
           {performance.title}
         </h3>
