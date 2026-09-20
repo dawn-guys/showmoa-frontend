@@ -17,7 +17,11 @@ export function TodaySection() {
   const isEmpty = !isLoading && (data?.length ?? 0) === 0;
 
   return (
-    <section aria-labelledby="today-heading" aria-busy={isLoading}>
+    <section
+      className="mt-2.5"
+      aria-labelledby="today-heading"
+      aria-busy={isLoading}
+    >
       <div className="mb-4 flex items-center justify-between px-4">
         <h2 id="today-heading" className="text-h1 text-foreground">
           오늘 나의 공연

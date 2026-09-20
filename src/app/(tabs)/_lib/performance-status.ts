@@ -20,3 +20,18 @@ export function getPerformanceStatusLabel(
   );
   return days <= 0 ? "진행 중" : `D-${days}`;
 }
+
+/**
+ * 카테고리 카드 하단 문구를 만든다.
+ *  - 진행 중: "공연 중"
+ *  - 예정: "{M}월 {D}일 오픈"
+ *  - 종료: "공연 종료"
+ * "공연 중"·"{M}월 {D}일 오픈"은 Figma 카드 표기를 따른다.
+ */
+export function getCategoryCaption(performance: PerformanceSummary): string {
+  if (performance.status === "ended") return "공연 종료";
+  if (performance.status === "ongoing") return "공연 중";
+
+  const date = parseISO(performance.startDate);
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 오픈`;
+}
