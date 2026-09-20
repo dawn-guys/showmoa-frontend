@@ -56,8 +56,9 @@
   /* App column width. Used by the root container and every fixed element. */
   --container-app: 480px; /* max-w-app */
 
-  /* Bottom navigation bar height. Confirm against the Figma design. */
-  --spacing-bottom-nav: 56px; /* h-bottom-nav, pb-bottom-nav */
+  /* Bottom navigation bar height (icon row), from the Figma nav frame.
+     The home-indicator safe area is added separately via pb-safe. */
+  --spacing-bottom-nav: 62px; /* h-bottom-nav, pb-bottom-nav */
 
   /* Mobile typography scale from the Figma design system.
      Line height, weight, and letter spacing are not in the design doc;

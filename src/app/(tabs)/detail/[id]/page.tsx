@@ -1,3 +1,5 @@
+import { Header } from "@/app/_components/header";
+
 // PLACEHOLDER: screen not implemented. See docs/spec/detail.md
 export default async function DetailPage({
   params,
@@ -5,8 +7,12 @@ export default async function DetailPage({
   const { id } = await params;
 
   return (
-    <main className="pb-safe-nav">
-      <h1>Detail {id}</h1>
-    </main>
+    <>
+      <Header />
+      {/* 상세 페이지는 하단 나브가 없으므로 pb-safe-nav 대신 pb-safe를 쓴다 */}
+      <main className="pb-safe">
+        <h1>Detail {id}</h1>
+      </main>
+    </>
   );
 }
