@@ -26,8 +26,12 @@ export function Toast({ message, variant = "default", className }: ToastProps) {
     <div
       role={variant === "error" ? "alert" : "status"}
       className={cn(
-        // 토스트 배경(#EDEDED)은 대응 토큰이 없어 임시 하드코딩.
-        "flex min-h-13 items-center justify-center rounded-sm bg-[#ededed] px-6 py-4 text-center text-sm font-semibold",
+        // Figma 에러 토스트 기준: 흰 배경, 12px, radius 4.
+        // 너비는 메시지 길이에 맞춰 줄어든다(inline-flex=hug). 컨테이너보다 길어지면
+        // max-w-full로 넘침을 막고 줄바꿈된다. 가운데 정렬은 사용하는 쪽에서 처리.
+        // text-[0.75rem]은 커스텀 text-body3와 달리 tailwind-merge가 폰트사이즈로 인식해
+        // VARIANT_TEXT의 text-* 색상과 충돌 없이 유지된다.
+        "inline-flex max-w-full items-center justify-center rounded bg-white px-3.5 py-2 text-center text-[0.75rem] font-normal",
         VARIANT_TEXT[variant],
         className,
       )}

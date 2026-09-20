@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,8 +24,10 @@ const loginSchema = z.object({
 });
 type LoginValues = z.infer<typeof loginSchema>;
 
-// 이메일 형식 검증 실패 시 상단에 띄우는 토스트(문구는 docs/spec/auth.md).
+// 상단 에러 토스트 문구(docs/spec/auth.md).
 const EMAIL_ERROR_MESSAGE = "이메일 형식을 확인해 주세요";
+const LOGIN_ERROR_MESSAGE =
+  "이메일 주소 또는 비밀번호를 확인한 후 다시 시도해 주세요";
 const TOAST_ID = "login-error-toast";
 
 export default function LoginPage() {
@@ -72,21 +75,33 @@ export default function LoginPage() {
   };
 
   const onSubmit = handleSubmit(async () => {
-    // MOCK: 실제 로그인 요청·세션 처리는 Phase 2. 지금은 성공 시 홈으로 이동만 한다.
-    router.push("/");
+    // MOCK: 실제 로그인 요청·세션 처리는 Phase 2. 백엔드가 없어 요청 실패 UI를 재현한다.
+    // 실패 시 이메일 인풋에 포커스가 들어가고 테두리는 error 색(destructive)이 된다.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    setEmailInvalid(true);
+    setToast(LOGIN_ERROR_MESSAGE);
+    setFocus("email");
   });
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {toast && (
-        // 상단 에러 토스트. 고정 요소는 앱 컬럼 폭으로 제한한다.
-        <div
-          id={TOAST_ID}
-          className="fixed inset-x-0 top-4 z-50 mx-auto max-w-app px-4"
-        >
-          <Toast variant="error" message={toast} />
-        </div>
-      )}
+      {/* 상단 에러 토스트: 위에서 스르륵 내려왔다가 일정 시간 뒤 다시 올라가 사라진다.
+          고정 요소는 앱 컬럼 폭으로 제한한다. reduced-motion은 전역 MotionConfig가 처리. */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="login-toast"
+            id={TOAST_ID}
+            className="fixed inset-x-0 top-10 z-50 mx-auto flex max-w-app justify-center px-4"
+            initial={{ y: "-150%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "-150%", opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
+            <Toast variant="error" message={toast} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <header className="flex h-17 items-center px-4">
         <button
