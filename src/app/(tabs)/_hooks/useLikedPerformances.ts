@@ -8,7 +8,9 @@ export function useLikedPerformances() {
     // MOCK: Phase 2에서 queryFn를 실제 좋아요 목록 요청으로 교체한다.
     queryFn: async () => {
       await new Promise((resolve) => setTimeout(resolve, 600));
-      return MOCK_LIKED_EMPTY ? [] : MOCK_LIKED_PERFORMANCES;
+      if (MOCK_LIKED_EMPTY) return [];
+      // 종료된 공연은 목록에 노출하지 않는다.
+      return MOCK_LIKED_PERFORMANCES.filter((p) => p.status !== "ended");
     },
   });
 }

@@ -8,7 +8,9 @@ export function useTodayPerformances() {
     // MOCK: Phase 2에서 queryFn를 실제 오늘 일정 요청으로 교체한다.
     queryFn: async () => {
       await new Promise((resolve) => setTimeout(resolve, 600));
-      return MOCK_TODAY_EMPTY ? [] : MOCK_TODAY_PERFORMANCES;
+      if (MOCK_TODAY_EMPTY) return [];
+      // 종료된 공연은 목록에 노출하지 않는다.
+      return MOCK_TODAY_PERFORMANCES.filter((p) => p.status !== "ended");
     },
   });
 }

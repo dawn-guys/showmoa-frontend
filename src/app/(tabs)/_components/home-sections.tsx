@@ -15,7 +15,7 @@ export function HomeSections() {
   const { isLoggedIn } = useAuth();
 
   return (
-    <div className="flex flex-col gap-8 py-4">
+    <div className="flex flex-col gap-12.5 py-4">
       <FeaturedSection />
       <PopularRankingSection />
       <CategorySection />

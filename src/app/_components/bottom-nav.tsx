@@ -50,7 +50,8 @@ export function BottomNav() {
                   isActive ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Icon size={24} />
+                {/* 활성 항목은 아이콘 선 굵기를 1.5 → 2로 키운다 */}
+                <Icon size={30} strokeWidth={isActive ? 2 : 1.5} />
               </Link>
             </li>
           );

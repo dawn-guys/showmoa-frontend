@@ -2,10 +2,11 @@
 
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { usePopularRanking } from "../_hooks/usePopularRanking";
+import { PopularRankingItem } from "./popular-ranking-item";
 
 /**
- * 인기 공연 순위 섹션(자리표시자).
- * TODO: 순위·제목·포스터 리스트 UI 구현, 행 클릭 시 /detail/:id 이동.
+ * 인기 공연 순위 섹션(로그인·비로그인 공용). 좋아요 많은 순 상위 5개를
+ * 순위와 함께 리스트로 보여주고, 행을 누르면 상세로 이동한다.
  */
 export function PopularRankingSection() {
   const { data, isLoading } = usePopularRanking();
@@ -14,21 +15,30 @@ export function PopularRankingSection() {
     <section
       aria-labelledby="popular-ranking-heading"
       aria-busy={isLoading}
-      className="px-4"
+      className="flex flex-col gap-[30px] px-4"
     >
-      <h2 id="popular-ranking-heading" className="mb-4 text-h1 text-foreground">
+      <h2 id="popular-ranking-heading" className="text-h1 text-foreground">
         인기 있는 공연 순위
       </h2>
       {isLoading ? (
-        <div className="flex flex-col gap-4" aria-hidden>
+        <ul className="flex flex-col gap-5" aria-hidden>
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-[50px] w-full rounded-lg" />
+            <li key={i} className="flex items-center gap-4">
+              <Skeleton className="size-6 rounded-full" />
+              <Skeleton className="h-4 flex-1 rounded-md" />
+              <Skeleton className="size-11 rounded-md" />
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
-        <div className="rounded-xl border border-border p-4 text-body3 text-muted-foreground">
-          [인기 순위] {data?.length ?? 0}개
-        </div>
+        <ul className="flex flex-col gap-5">
+          {data?.map((performance) => (
+            <PopularRankingItem
+              key={performance.id}
+              performance={performance}
+            />
+          ))}
+        </ul>
       )}
     </section>
   );

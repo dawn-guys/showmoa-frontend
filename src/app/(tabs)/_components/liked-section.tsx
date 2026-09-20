@@ -1,29 +1,47 @@
 "use client";
 
-import { Skeleton } from "@/shared/components/ui/skeleton";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { useLikedPerformances } from "../_hooks/useLikedPerformances";
+import {
+  HorizontalPerformanceList,
+  HorizontalPerformanceListSkeleton,
+} from "./horizontal-performance-list";
 
 /**
- * 좋아요한 공연 섹션(자리표시자, 로그인 전용).
- * TODO: 제목 옆 /wishlist 이동 아이콘, 가로 슬라이드 카드 목록 구현.
- * 콘텐츠가 없으면 빈 상태 문구를 노출한다.
+ * 좋아요한 공연 섹션(로그인 전용). 제목 옆 화살표로 /wishlist 이동,
+ * 카드가 폭을 넘으면 가로 스와이프. 목록이 비면 빈 상태 문구를 노출한다.
  */
 export function LikedSection() {
   const { data, isLoading } = useLikedPerformances();
   const isEmpty = !isLoading && (data?.length ?? 0) === 0;
 
   return (
-    <section aria-label="좋아요한 공연" aria-busy={isLoading} className="px-4">
+    <section aria-labelledby="liked-heading" aria-busy={isLoading}>
+      <div className="mb-4 flex items-center justify-between px-4">
+        <h2 id="liked-heading" className="text-h1 text-foreground">
+          내가 좋아요한 공연
+        </h2>
+        <Link
+          href="/wishlist"
+          aria-label="좋아요한 공연 전체 보기"
+          className="-mr-1 flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-muted"
+        >
+          <ChevronRight size={20} />
+        </Link>
+      </div>
+
       {isLoading ? (
-        <Skeleton className="h-40 w-full rounded-xl" aria-hidden />
+        <HorizontalPerformanceListSkeleton />
       ) : isEmpty ? (
-        <p className="text-body3 text-muted-foreground">
+        <p className="px-4 py-10 text-center text-body3 text-muted-foreground">
           좋아요 한 공연이 없습니다
         </p>
       ) : (
-        <div className="rounded-xl border border-border p-4 text-body3 text-muted-foreground">
-          [좋아요한 공연] {data?.length ?? 0}개
-        </div>
+        <HorizontalPerformanceList
+          items={data ?? []}
+          label="좋아요한 공연 목록"
+        />
       )}
     </section>
   );

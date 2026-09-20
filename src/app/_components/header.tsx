@@ -21,7 +21,10 @@ export function Header() {
   const hasUnread = isLoggedIn && unreadCount > 0;
 
   return (
-    <header className="flex h-20 items-center justify-between bg-background px-4">
+    // 오른쪽 패딩은 9px: 아이콘 터치 영역(44px)이 30px 아이콘을 중앙 정렬하며
+    // 좌우 7px씩 인셋을 갖는데, 16-7=9로 잡아야 아이콘의 시각적 오른쪽 끝이
+    // 로고 왼쪽과 같은 16px 라인에 맞는다.
+    <header className="flex h-20 items-center justify-between bg-background pr-[9px] pl-4">
       <Link
         href="/"
         aria-label="쇼모아 홈"
@@ -48,11 +51,12 @@ export function Header() {
               aria-label={hasUnread ? "알림, 읽지 않은 알림 있음" : "알림"}
               className="relative flex size-11 items-center justify-center rounded-full text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-muted"
             >
-              <BellRingLineDuotoneIcon size={24} />
-              {/* 읽지 않은 알림이 있을 때만 주조색 점을 노출한다 */}
+              <BellRingLineDuotoneIcon size={30} />
+              {/* 읽지 않은 알림이 있을 때만 주조색 점을 노출한다.
+                  30px 아이콘 기준 종 오른쪽 위(44px 터치 박스에서 top/right 7px) */}
               {hasUnread && (
                 <span
-                  className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-primary"
+                  className="absolute top-[7px] right-[7px] size-1.5 rounded-full bg-primary"
                   aria-hidden
                 />
               )}
@@ -63,7 +67,7 @@ export function Header() {
             aria-label="설정"
             className="flex size-11 items-center justify-center rounded-full text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-muted"
           >
-            <SettingsLineDuotoneIcon size={24} />
+            <SettingsLineDuotoneIcon size={30} />
           </Link>
         </div>
       )}
