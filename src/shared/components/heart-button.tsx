@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { HeartBoldIcon, HeartLinearIcon } from "@solar-icons/react";
 import { cn } from "cn";
 
 interface HeartButtonProps {
@@ -33,14 +33,12 @@ export function HeartButton({
         className,
       )}
     >
-      <Heart
-        size={size}
-        className={cn(
-          isLiked
-            ? "fill-primary text-primary"
-            : "fill-none text-muted-foreground",
-        )}
-      />
+      {/* 찜 상태: 채워진 하트(Bold)와 외곽선 하트(Linear)로 구분 */}
+      {isLiked ? (
+        <HeartBoldIcon size={size} className="text-primary" />
+      ) : (
+        <HeartLinearIcon size={size} className="text-muted-foreground" />
+      )}
     </button>
   );
 }
