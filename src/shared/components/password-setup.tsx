@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "motion/react";
 import { PasswordField } from "@/shared/components/password-field";
 import { CtaButton } from "@/shared/components/cta-button";
 import { cn } from "cn";
@@ -162,7 +163,13 @@ export function PasswordSetup({
               value={password}
               readOnly
             />
-            <div className="mt-2.5">
+            {/* 두 번째 인풋: 아래에서 스르륵 올라오며(opacity 0→100) 나타난다. */}
+            <motion.div
+              className="mt-2.5"
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <PasswordField
                 label="비밀번호 확인"
                 hideLabel
@@ -175,7 +182,7 @@ export function PasswordSetup({
                 onBlur={handleConfirmBlur}
                 error={confirmError ?? undefined}
               />
-            </div>
+            </motion.div>
             <CtaButton
               type="submit"
               disabled={!confirmValid}

@@ -224,7 +224,13 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
               value={email}
               readOnly
             />
-            <div className="mt-2.5">
+            {/* 두 번째 인풋: 아래에서 스르륵 올라오며(opacity 0→100) 나타난다. */}
+            <motion.div
+              className="mt-2.5"
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <TextField
                 label="인증 번호"
                 hideLabel
@@ -241,7 +247,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
                 aria-invalid={codeInvalid || undefined}
                 aria-describedby={codeInvalid && toast ? TOAST_ID : undefined}
               />
-            </div>
+            </motion.div>
             {/* 타이머는 하단 CTA 바로 위에 가로 중앙으로 둔다(Figma node 488:5286). */}
             <div className="mt-auto flex justify-center">
               <VerificationTimer
