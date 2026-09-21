@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   title: "show moa",
   description: "전국 공연과 공연장을 한 곳에서",
   formatDetection: { telephone: false, email: false, address: false },
+  // public/favicon.svg를 파비콘으로 연결한다.
+  icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }] },
 };
 
 export const viewport: Viewport = {

@@ -1,8 +1,13 @@
-// PLACEHOLDER: screen not implemented. See docs/spec/notification.md
+import { AppBar } from "@/app/_components/app-bar";
+import { NotificationList } from "./_components/notification-list";
+
 export default function NotificationPage() {
   return (
-    <main>
-      <h1>Notification</h1>
-    </main>
+    <>
+      <AppBar title="알림함" />
+      <main>
+        <NotificationList />
+      </main>
+    </>
   );
 }

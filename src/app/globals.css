@@ -63,8 +63,8 @@
   /* Mobile typography scale from the Figma design system.
      Line height, weight, and letter spacing are not in the design doc;
      these are agreed defaults (headings 1.4, body 1.5; H 600, body 400;
-     tracking tightened for Korean). body1 (14px) is intentionally omitted
-     for now. The default Tailwind text-* scale is kept alongside these. */
+     tracking tightened for Korean). The default Tailwind text-* scale is
+     kept alongside these. */
   /* 줄간격·굵기·자간은 디자인 확정 전 기본값이다. 화면 작업을 진행하며 조정한다. */
   --text-h1: 1.25rem; /* 20px */
   --text-h1--line-height: 1.4;
@@ -76,7 +76,12 @@
   --text-h2--font-weight: 600;
   --text-h2--letter-spacing: -0.02em;
 
-  --text-body2: 1rem; /* 16px */
+  --text-body1: 1rem; /* 16px */
+  --text-body1--line-height: 1.5;
+  --text-body1--font-weight: 400;
+  --text-body1--letter-spacing: -0.01em;
+
+  --text-body2: 0.875rem; /* 14px */
   --text-body2--line-height: 1.5;
   --text-body2--font-weight: 400;
   --text-body2--letter-spacing: -0.01em;
@@ -154,9 +159,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    /* body2 (16px) is the default: inputs inherit it and clear the 16px
+    /* body1 (16px) is the default: inputs inherit it and clear the 16px
        minimum that prevents iOS auto-zoom (mobile.md). */
-    @apply bg-background text-body2 text-foreground;
+    @apply bg-background text-body1 text-foreground;
     overscroll-behavior: none;
     word-break: keep-all;
   }
