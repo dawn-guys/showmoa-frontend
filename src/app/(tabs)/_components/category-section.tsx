@@ -52,7 +52,7 @@ export function CategorySection() {
               type="button"
               aria-pressed={genre === option}
               onClick={() => setGenre(option)}
-              className="shrink-0 rounded-sm text-[13px] whitespace-nowrap text-muted-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:font-medium aria-pressed:text-primary"
+              className="shrink-0 rounded-sm text-[13px] whitespace-nowrap text-muted-foreground transition-colors outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring aria-pressed:font-medium aria-pressed:text-primary"
             >
               {option}
             </button>
