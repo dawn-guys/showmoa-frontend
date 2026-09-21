@@ -39,7 +39,7 @@ export function FeaturedSection() {
             href={detailHref}
             className="w-fit rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <h2 className="line-clamp-2 text-body2 font-medium text-foreground">
+            <h2 className="line-clamp-2 text-body1 font-medium text-foreground">
               {data.title}
             </h2>
           </Link>

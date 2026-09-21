@@ -46,15 +46,15 @@ export function ConfirmModal({
         className="gap-0 rounded-lg bg-popover p-5"
       >
         <DialogHeader className="gap-5">
-          <DialogTitle className="text-body2 font-medium text-foreground">
+          <DialogTitle className="text-body1 font-medium text-foreground">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-body2 font-medium text-muted-foreground">
+          <DialogDescription className="text-body1 font-medium text-muted-foreground">
             {description}
           </DialogDescription>
         </DialogHeader>
         <div className="mt-14 flex items-center justify-end gap-5">
-          <DialogClose className="px-1 py-2 text-body2 font-semibold text-foreground outline-none hover:cursor-pointer focus-visible:underline">
+          <DialogClose className="px-1 py-2 text-body1 font-semibold text-foreground outline-none hover:cursor-pointer focus-visible:underline">
             {cancelLabel}
           </DialogClose>
           <button
@@ -63,7 +63,7 @@ export function ConfirmModal({
               onConfirm();
               onOpenChange(false);
             }}
-            className="px-1 py-2 text-body2 font-semibold text-primary outline-none hover:cursor-pointer focus-visible:underline"
+            className="px-1 py-2 text-body1 font-semibold text-primary outline-none hover:cursor-pointer focus-visible:underline"
           >
             {confirmLabel}
           </button>

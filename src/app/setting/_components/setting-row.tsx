@@ -14,7 +14,7 @@ interface SettingRowProps {
 
 // 링크형·버튼형 공통 스타일. 세로 44px로 터치 타깃을 확보한다.
 const rowClassName =
-  "flex min-h-11 w-full items-center hover:cursor-pointer justify-between gap-4 rounded-sm text-body2 font-[300] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-70";
+  "flex min-h-11 w-full items-center hover:cursor-pointer justify-between gap-4 rounded-sm text-body1 font-[300] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-70";
 
 /**
  * 설정 목록의 한 행. 좌측 문구 + 우측 화살표로 구성된다.

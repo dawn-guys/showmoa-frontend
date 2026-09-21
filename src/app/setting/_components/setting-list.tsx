@@ -55,7 +55,7 @@ export function SettingList() {
             ) : isLoggedIn ? (
               <>
                 {/* 로그인한 본인 계정(이메일). 클릭 동작 없는 표시 항목이다. */}
-                <p className="flex min-h-11 items-center text-body2 font-[300] [overflow-wrap:anywhere] text-foreground">
+                <p className="flex min-h-11 items-center text-body1 font-[300] [overflow-wrap:anywhere] text-foreground">
                   {user?.email}
                 </p>
                 <SettingRow label="비밀번호 변경" href="/password/update" />

@@ -47,7 +47,7 @@ export function PerformanceListItem({
           )}
         </span>
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-body2 font-semibold text-foreground">
+          <span className="truncate text-body1 font-semibold text-foreground">
             {title}
           </span>
           {caption && (
