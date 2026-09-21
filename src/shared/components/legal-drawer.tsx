@@ -45,9 +45,9 @@ export function LegalDrawer({
           <header className="flex h-17 items-center gap-6 px-4">
             <DialogPrimitive.Close
               aria-label="뒤로 가기"
-              className="-ml-2.5 flex size-11 items-center justify-center rounded-full text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-muted"
+              className="-ml-2.5 flex size-11 items-center justify-center rounded-full text-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:bg-muted"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={30} />
             </DialogPrimitive.Close>
             <DialogPrimitive.Title className="text-h1 text-foreground">
               {title}

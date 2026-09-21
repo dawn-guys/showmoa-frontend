@@ -54,7 +54,7 @@ export function ConfirmModal({
           </DialogDescription>
         </DialogHeader>
         <div className="mt-14 flex items-center justify-end gap-5">
-          <DialogClose className="px-1 py-2 text-body2 font-semibold text-foreground outline-none focus-visible:underline">
+          <DialogClose className="px-1 py-2 text-body2 font-semibold text-foreground outline-none hover:cursor-pointer focus-visible:underline">
             {cancelLabel}
           </DialogClose>
           <button
@@ -63,7 +63,7 @@ export function ConfirmModal({
               onConfirm();
               onOpenChange(false);
             }}
-            className="px-1 py-2 text-body2 font-semibold text-primary outline-none focus-visible:underline"
+            className="px-1 py-2 text-body2 font-semibold text-primary outline-none hover:cursor-pointer focus-visible:underline"
           >
             {confirmLabel}
           </button>
