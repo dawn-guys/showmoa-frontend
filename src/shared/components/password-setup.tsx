@@ -1,17 +1,23 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "motion/react";
 import { PasswordField } from "@/shared/components/password-field";
 import { CtaButton } from "@/shared/components/cta-button";
 import { cn } from "cn";
 
 // UI 문구(docs/spec/auth.md · 회원가입/비밀번호 찾기/비밀번호 변경-공통).
+// variant에 따라 메인 문구만 달라진다.
+// - signup: "비밀번호를 설정/확인해 주세요"
+// - reset : "새로운 비밀번호를 설정/확인해 주세요"(비밀번호 찾기·변경-공통)
 const SET_MAIN = "비밀번호를 설정해 주세요";
-const SET_SUB = "안전한 비밀번호를 설정해 주세요";
+const SET_MAIN_RESET = "새로운 비밀번호를 설정해 주세요";
+const SET_SUB = "소문자 영문, 숫자를 포함한 8~16자를 작성해 주세요";
 const SET_PLACEHOLDER = "영문, 숫자를 포함한 8~16자를 작성 하세요";
 const SET_ERROR = "소문자 영문, 숫자를 조합한 8~16자로 작성해 주세요";
 
 const CONFIRM_MAIN = "비밀번호를 확인해 주세요";
+const CONFIRM_MAIN_RESET = "새로운 비밀번호를 확인해 주세요";
 const CONFIRM_SUB = "설정한 비밀번호를 확인해 주세요";
 // spec 원문은 "비밀버호"(오타)라 Figma(node 488:5433) 값을 따른다.
 const CONFIRM_PLACEHOLDER = "비밀번호를 확인해 주세요";
@@ -27,6 +33,11 @@ const isValidPassword = (value: string) =>
 interface PasswordSetupProps {
   /** 비밀번호 설정·확인을 모두 통과하면 호출된다(다음 단계로 이동). */
   onComplete: (password: string) => void;
+  /**
+   * 문구 변형. "signup"은 회원가입(기본), "reset"은 비밀번호 찾기·변경의
+   * "새로운 비밀번호" 문구를 사용한다(docs/spec/auth.md).
+   */
+  variant?: "signup" | "reset";
 }
 
 /**
@@ -35,7 +46,14 @@ interface PasswordSetupProps {
  * 검증(인풋 인라인 에러)을 보여준다(docs/spec/common-ui.md · 인풋). 검증은
  * 클라이언트에서만 이뤄져 별도 요청/토스트는 없다.
  */
-export function PasswordSetup({ onComplete }: PasswordSetupProps) {
+export function PasswordSetup({
+  onComplete,
+  variant = "signup",
+}: PasswordSetupProps) {
+  // 메인 문구만 variant에 따라 달라진다(서브·placeholder·에러는 동일).
+  const setMain = variant === "reset" ? SET_MAIN_RESET : SET_MAIN;
+  const confirmMain = variant === "reset" ? CONFIRM_MAIN_RESET : CONFIRM_MAIN;
+
   const [phase, setPhase] = React.useState<"set" | "confirm">("set");
 
   const [password, setPassword] = React.useState("");
@@ -93,7 +111,7 @@ export function PasswordSetup({ onComplete }: PasswordSetupProps) {
     <div className="flex flex-1 flex-col px-4 pt-4 pb-5">
       {phase === "set" ? (
         <>
-          <h2 className="text-h1 text-foreground">{SET_MAIN}</h2>
+          <h2 className="text-h1 text-foreground">{setMain}</h2>
           <p className="mt-2.5 text-sm font-medium break-keep text-muted-foreground">
             {SET_SUB}
           </p>
@@ -128,7 +146,7 @@ export function PasswordSetup({ onComplete }: PasswordSetupProps) {
         </>
       ) : (
         <>
-          <h2 className="text-h1 text-foreground">{CONFIRM_MAIN}</h2>
+          <h2 className="text-h1 text-foreground">{confirmMain}</h2>
           <p className="mt-2.5 text-sm font-medium break-keep text-muted-foreground">
             {CONFIRM_SUB}
           </p>
@@ -145,7 +163,13 @@ export function PasswordSetup({ onComplete }: PasswordSetupProps) {
               value={password}
               readOnly
             />
-            <div className="mt-2.5">
+            {/* 두 번째 인풋: 아래에서 스르륵 올라오며(opacity 0→100) 나타난다. */}
+            <motion.div
+              className="mt-2.5"
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <PasswordField
                 label="비밀번호 확인"
                 hideLabel
@@ -158,7 +182,7 @@ export function PasswordSetup({ onComplete }: PasswordSetupProps) {
                 onBlur={handleConfirmBlur}
                 error={confirmError ?? undefined}
               />
-            </div>
+            </motion.div>
             <CtaButton
               type="submit"
               disabled={!confirmValid}
