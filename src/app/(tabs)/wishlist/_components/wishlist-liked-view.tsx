@@ -52,7 +52,7 @@ export function WishlistLikedView() {
     !isLoading && liked.length > 0 && filtered.length === 0;
 
   return (
-    <div className="flex flex-col gap-3.75 px-4">
+    <div className="flex min-h-[calc(100dvh-5rem-var(--spacing-bottom-nav))] flex-col gap-3.75 px-4">
       {/* 제목 / 카테고리(현재 필터) / 필터 버튼. 헤더처럼 앱 컬럼 폭을 꽉 채우는
           40px 밴드라 본문 좌우 여백(px-4)을 상쇄(-mx-4)하고 자체 여백을 준다.
           우측 pr는 30px 아이콘의 시각적 오른쪽 끝을 16px 라인에 맞추기 위해 9px. */}
@@ -77,26 +77,21 @@ export function WishlistLikedView() {
       <WishlistSearch onSearch={setQuery} />
 
       {/* 좋아요한 공연 목록 */}
-      <section aria-label="좋아요한 공연 목록" aria-busy={isLoading}>
+      <section
+        aria-label="좋아요한 공연 목록"
+        aria-busy={isLoading}
+        className="flex flex-1 flex-col"
+      >
         {isLoading ? (
-          <ul className="flex flex-col gap-3.5" aria-hidden>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <li key={i} className="flex items-center gap-3">
-                <Skeleton className="size-[50px] shrink-0 rounded-lg" />
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Skeleton className="h-4 w-2/5 rounded-md" />
-                  <Skeleton className="h-3 w-1/5 rounded-md" />
-                </div>
-                <Skeleton className="size-6 shrink-0 rounded-full" />
-              </li>
-            ))}
-          </ul>
+          // 로딩 스켈레톤: 검색창 아래 가로 꽉 찬 단일 블록(Figma 참조).
+          <Skeleton className="h-[50px] w-full rounded-[5px]" aria-hidden />
         ) : isEmpty ? (
-          <p className="py-16 text-center text-body3 text-muted-foreground">
+          // 빈 상태 문구는 검색창과 하단 나브 사이 영역 중앙에 둔다.
+          <p className="m-auto text-center text-body3 text-muted-foreground">
             좋아요 한 공연이 없습니다
           </p>
         ) : isFilteredEmpty ? (
-          <p className="py-16 text-center text-body3 text-muted-foreground">
+          <p className="m-auto text-center text-body3 text-muted-foreground">
             검색 결과가 없습니다
           </p>
         ) : (

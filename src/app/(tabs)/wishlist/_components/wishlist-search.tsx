@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Search } from "lucide-react";
+import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
 
 interface WishlistSearchProps {
   /** 확정된 검색어로 목록을 필터링한다. */
@@ -18,31 +19,18 @@ const DEBOUNCE_MS = 300;
  */
 export function WishlistSearch({ onSearch }: WishlistSearchProps) {
   const [value, setValue] = useState("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 언마운트 시 대기 중인 디바운스 타이머를 정리한다.
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const clearTimer = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = null;
-  };
+  const search = useDebouncedCallback(onSearch, DEBOUNCE_MS);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = e.target.value;
     setValue(next);
-    clearTimer();
-    timerRef.current = setTimeout(() => onSearch(next.trim()), DEBOUNCE_MS);
+    search.run(next.trim());
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     // 폼 기본 새로고침을 막고, 대기 중인 디바운스를 건너뛰어 즉시 검색한다.
     e.preventDefault();
-    clearTimer();
+    search.cancel();
     onSearch(value.trim());
   };
 

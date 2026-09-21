@@ -35,7 +35,7 @@ export function CtaButton({
   return (
     <Button
       className={cn(
-        "h-13 w-full rounded-sm text-lg font-semibold",
+        "h-13 w-full rounded-sm text-lg font-semibold text-[#f6f6f6] hover:cursor-pointer",
         isLoading
           ? "disabled:bg-primary disabled:opacity-100"
           : "disabled:bg-secondary disabled:text-disabled disabled:opacity-100",

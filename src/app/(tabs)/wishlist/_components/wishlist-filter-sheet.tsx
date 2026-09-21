@@ -35,7 +35,7 @@ function FilterSheetBody({
     <>
       {/* 제목 + 닫기 버튼 */}
       <div className="flex items-center justify-between">
-        <DialogPrimitive.Title className="text-[1.375rem] leading-tight font-semibold text-white">
+        <DialogPrimitive.Title className="text-[1.375rem] leading-tight font-[500] text-white">
           필터링
         </DialogPrimitive.Title>
         <DialogPrimitive.Close
@@ -98,17 +98,24 @@ export function WishlistFilterSheet({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
+        {/* 배경 딤 + 블러(Figma BACKGROUND_BLUR 5). backdrop-filter 미지원
+            브라우저에서는 딤만 남는다. opacity만 트랜지션해 컴포지터에서 처리된다. */}
         <DialogPrimitive.Backdrop
           className={cn(
-            "fixed inset-0 z-50 bg-black/40 duration-200",
-            "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+            "fixed inset-0 z-50 bg-black/40 supports-backdrop-filter:backdrop-blur-[5px]",
+            "transition-opacity duration-300 ease-out motion-reduce:transition-none",
+            "data-ending-style:opacity-0 data-starting-style:opacity-0",
           )}
         />
+        {/* 시트 슬라이드. keyframe(animate-in) 대신 transform만 트랜지션해
+            filter 레이어 없이 GPU 컴포지터에서 부드럽게 돌린다.
+            will-change로 레이어를 미리 승격해 첫 프레임 끊김을 없앤다. */}
         <DialogPrimitive.Popup
           className={cn(
             "fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-app flex-col gap-10 rounded-t-2xl bg-[#232323] px-3.5 pt-5 outline-none",
             "pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
-            "duration-200 data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom",
+            "transition-transform duration-300 ease-out will-change-transform motion-reduce:transition-none",
+            "data-ending-style:translate-y-full data-starting-style:translate-y-full",
           )}
         >
           <FilterSheetBody onApply={handleApply} />
