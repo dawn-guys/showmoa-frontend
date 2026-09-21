@@ -10,6 +10,7 @@
   --color-placeholder: var(--placeholder);
   --color-disabled: var(--disabled);
   --color-hint: var(--hint);
+  --color-assist: var(--assist);
   --font-sans:
     var(--font-pretendard), -apple-system, BlinkMacSystemFont, system-ui,
     "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
@@ -144,6 +145,7 @@
   --placeholder: #5e5e5e;
   --disabled: #5e5e5e;
   --hint: #5e5e5e;
+  --assist: #888888;
   --sidebar: #171717;
   --sidebar-foreground: #f6f6f6;
   --sidebar-primary: #1447e6;
@@ -188,5 +190,11 @@
 
   input[type="search"]::-webkit-search-cancel-button {
     -webkit-appearance: none;
+  }
+
+  /* 모든 인풋의 캐럿(입력 커서)은 주조색으로 표시한다. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea {
+    caret-color: var(--primary);
   }
 }
