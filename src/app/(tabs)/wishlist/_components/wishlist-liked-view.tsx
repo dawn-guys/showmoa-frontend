@@ -5,7 +5,16 @@ import { parseAsBoolean, useQueryState } from "nuqs";
 import { HamburgerMenuLinearIcon } from "@solar-icons/react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import type { GenreFilterOption } from "@/shared/constants/genre";
+import type { PerformanceStatus } from "@/app/(tabs)/_types";
 import { useWishlist } from "../_hooks/useWishlist";
+
+// 목록 정렬 우선순위. 낮을수록 위로 온다.
+// 같은 상태 안에서는 원본(최신 추가) 순서를 그대로 유지한다.
+const STATUS_ORDER: Record<PerformanceStatus, number> = {
+  ongoing: 0, // 상영 중
+  upcoming: 1, // 상영 예정
+  ended: 2, // 상영 종료(항상 마지막)
+};
 import { WishlistFilterSheet } from "./wishlist-filter-sheet";
 import { WishlistItem } from "./wishlist-item";
 import { WishlistSearch } from "./wishlist-search";
@@ -39,7 +48,9 @@ export function WishlistLikedView() {
     () =>
       liked
         .filter((p) => genre === "전체" || p.genre === genre)
-        .filter((p) => query === "" || p.title.includes(query)),
+        .filter((p) => query === "" || p.title.includes(query))
+        // 상태 순으로 안정 정렬(종료는 맨 뒤). 같은 상태 내 최신 추가 순 유지.
+        .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
     [liked, genre, query],
   );
 
@@ -87,11 +98,11 @@ export function WishlistLikedView() {
           <Skeleton className="h-[50px] w-full rounded-[5px]" aria-hidden />
         ) : isEmpty ? (
           // 빈 상태 문구는 검색창과 하단 나브 사이 영역 중앙에 둔다.
-          <p className="m-auto text-center text-body3 text-muted-foreground">
+          <p className="text-4.5 m-auto text-center text-muted-foreground">
             좋아요 한 공연이 없습니다
           </p>
         ) : isFilteredEmpty ? (
-          <p className="m-auto text-center text-body3 text-muted-foreground">
+          <p className="text-4.5 m-auto text-center text-muted-foreground">
             검색 결과가 없습니다
           </p>
         ) : (
