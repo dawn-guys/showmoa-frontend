@@ -10,7 +10,7 @@ import {
   type GenreFilterOption,
 } from "@/shared/constants/genre";
 
-interface WishlistFilterSheetProps {
+interface GenreFilterSheetProps {
   /** 열림 상태 (URL 등 바깥 상태와 연결) */
   open: boolean;
   /** 열림 상태 변경 콜백 */
@@ -23,7 +23,7 @@ interface WishlistFilterSheetProps {
  * 시트 본문. 시트가 닫히면 언마운트되므로 임시 선택 상태가 열 때마다
  * 초기화되어, CTA가 항상 비활성에서 시작한다.
  */
-function FilterSheetBody({
+function GenreFilterSheetBody({
   onApply,
 }: {
   onApply: (genre: GenreFilterOption) => void;
@@ -81,15 +81,16 @@ function FilterSheetBody({
 }
 
 /**
- * 찜 목록 장르 필터 바텀 시트. 하단에서 올라오며, 목록에서 장르를 하나
- * 선택하면 주조색으로 강조되고 CTA가 활성화된다. 완료를 누르면 선택한
- * 장르를 적용하고 시트를 닫는다. 배경/X 버튼/Esc로도 닫을 수 있다.
+ * 장르 필터 바텀 시트. 하단에서 올라오며, 목록에서 장르를 하나 선택하면
+ * 주조색으로 강조되고 CTA가 활성화된다. 완료를 누르면 선택한 장르를
+ * 적용하고 시트를 닫는다. 배경/X 버튼/Esc로도 닫을 수 있다.
+ * 검색(장르 필터)과 찜(장르 필터링)에서 공통으로 사용한다.
  */
-export function WishlistFilterSheet({
+export function GenreFilterSheet({
   open,
   onOpenChange,
   onApply,
-}: WishlistFilterSheetProps) {
+}: GenreFilterSheetProps) {
   const handleApply = (genre: GenreFilterOption) => {
     onApply(genre);
     onOpenChange(false);
@@ -118,7 +119,7 @@ export function WishlistFilterSheet({
             "data-ending-style:translate-y-full data-starting-style:translate-y-full",
           )}
         >
-          <FilterSheetBody onApply={handleApply} />
+          <GenreFilterSheetBody onApply={handleApply} />
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
