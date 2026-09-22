@@ -15,7 +15,7 @@ const STATUS_ORDER: Record<PerformanceStatus, number> = {
   upcoming: 1, // 상영 예정
   ended: 2, // 상영 종료(항상 마지막)
 };
-import { WishlistFilterSheet } from "./wishlist-filter-sheet";
+import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
 import { WishlistItem } from "./wishlist-item";
 import { WishlistSearch } from "./wishlist-search";
 
@@ -118,7 +118,7 @@ export function WishlistLikedView() {
         )}
       </section>
 
-      <WishlistFilterSheet
+      <GenreFilterSheet
         open={filterOpen}
         onOpenChange={setFilterOpen}
         onApply={setGenre}
