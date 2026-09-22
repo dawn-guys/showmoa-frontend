@@ -16,7 +16,7 @@ export function SearchFilterChip({ labels, className }: SearchFilterChipProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-[#48484A] px-4 py-2 text-body3 text-foreground",
+        "inline-flex items-center gap-2 rounded-[5px] border border-[#48484A] px-4 py-2 text-[12px] text-foreground",
         className,
       )}
     >

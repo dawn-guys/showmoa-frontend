@@ -22,21 +22,14 @@ interface RegionFilterDrawerProps {
   onApply: (label: string) => void;
 }
 
-/** 선택 경로(path)로부터 화면에 나란히 보일 두 열의 목록과 선택값을 계산한다. */
-function derivePanes(path: RegionNode[]) {
-  const last = path.at(-1) ?? null;
-  // 잎(더 내려갈 곳이 없는 값)을 골랐으면 그 부모 레벨을 왼쪽에 유지해
-  // 형제 잎들 사이에서 다시 고를 수 있게 한다. 아니면 마지막 값을 왼쪽에 둔다.
-  const leftLevel =
-    last && isLeafRegion(last)
-      ? Math.max(path.length - 2, 0)
-      : Math.max(path.length - 1, 0);
-  const leftParent = leftLevel === 0 ? null : path[leftLevel - 1];
-  const leftList = leftParent?.children ?? REGIONS;
-  const leftSelected = path[leftLevel] ?? null;
-  const rightList = leftSelected?.children ?? [];
-  const rightSelected = path[leftLevel + 1] ?? null;
-  return { leftLevel, leftList, leftSelected, rightList, rightSelected };
+/** 최대 선택 깊이. 시/도 → 구·시 → 동·구 3단계까지만 내려간다. */
+const MAX_DEPTH = 3;
+
+/** 더 내려갈 수 없는 최종 선택인지. 3단계까지 갔거나 잎(하위 없음)이면 최종이다. */
+function isFinalPath(path: RegionNode[]): boolean {
+  const last = path.at(-1);
+  if (!last) return false;
+  return path.length >= MAX_DEPTH || isLeafRegion(last);
 }
 
 /** 한 열의 지역 목록. 선택된 값만 주조색으로 강조한다. */
@@ -59,7 +52,7 @@ function RegionColumn({
       aria-label={label}
       // 값이 높이를 넘으면 스크롤바 없이 부드럽게 스크롤한다.
       className={cn(
-        "h-full overflow-y-auto overscroll-contain py-2",
+        "h-full min-w-0 flex-[1] overflow-y-auto overscroll-contain py-2",
         "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
@@ -93,21 +86,30 @@ function RegionFilterDrawerBody({
 }: {
   onApply: (label: string) => void;
 }) {
-  // 시/도 → 구/시 → 동/구 … 잎까지 이어지는 선택 경로.
+  // 시/도 → 구·시 → 동·구 로 이어지는 선택 경로(최대 3단계).
   const [path, setPath] = useState<RegionNode[]>([]);
-  const { leftLevel, leftList, leftSelected, rightList, rightSelected } =
-    derivePanes(path);
 
-  // 왼쪽 열에서 고르면 해당 레벨을 교체하고 그 아래 선택은 버린다.
-  const selectLeft = (node: RegionNode) =>
-    setPath([...path.slice(0, leftLevel), node]);
-  // 오른쪽 열(하위)에서 고르면 경로를 한 단계 더 내려간다.
-  const selectRight = (node: RegionNode) =>
-    setPath([...path.slice(0, leftLevel + 1), node]);
+  // 세 열은 각각 시/도·그 하위·그 하위를 보여준다. 상위 선택이 없으면 빈 열이다.
+  const columns = [
+    { label: "시/도 선택", list: REGIONS, selected: path[0] ?? null },
+    {
+      label: "구·시 선택",
+      list: path[0]?.children ?? [],
+      selected: path[1] ?? null,
+    },
+    {
+      label: "동·구 선택",
+      list: path[1]?.children ?? [],
+      selected: path[2] ?? null,
+    },
+  ];
 
-  const last = path.at(-1) ?? null;
-  // 잎까지 내려갔을 때만 지역 필터링을 적용할 수 있다.
-  const canApply = last !== null && isLeafRegion(last);
+  // level 열에서 고르면 그 단계까지의 경로를 교체하고 아래 단계 선택은 버린다.
+  const select = (level: number, node: RegionNode) =>
+    setPath([...path.slice(0, level), node]);
+
+  // 3단계까지 갔거나 잎을 골랐을 때만 지역 필터링을 적용할 수 있다.
+  const canApply = isFinalPath(path);
 
   return (
     <>
@@ -130,27 +132,23 @@ function RegionFilterDrawerBody({
         </p>
       </div>
 
-      {/* 지역 목록 두 열. 왼쪽에서 고르면 오른쪽에 하위 지역이 나타난다. */}
+      {/* 지역 목록 세 열(시/도 · 구/시 · 동/구). 폭 비율은 피그마(118:80:80)를 따른다. */}
       <div className="flex min-h-0 flex-1 bg-[#272727]">
-        <RegionColumn
-          label="시/도 선택"
-          list={leftList}
-          selected={leftSelected}
-          onSelect={selectLeft}
-          className="w-[32%] shrink-0 border-r border-white/10"
-        />
-        <RegionColumn
-          label="하위 지역 선택"
-          list={rightList}
-          selected={rightSelected}
-          onSelect={selectRight}
-          className="flex-1"
-        />
+        {columns.map((column, level) => (
+          <RegionColumn
+            key={column.label}
+            label={column.label}
+            list={column.list}
+            selected={column.selected}
+            onSelect={(node) => select(level, node)}
+            className={cn(level < 2 && "border-r border-white/10")}
+          />
+        ))}
       </div>
 
-      {/* CTA: 잎까지 지역을 선택하면 하단에서 나타난다. */}
+      {/* CTA: 3단계(또는 그 전 잎)까지 지역을 선택하면 하단에서 나타난다. */}
       {canApply && (
-        <div className="px-4 pt-3 pb-safe">
+        <div className="bg-[#272727] px-4 pb-4.5">
           <CtaButton onClick={() => onApply(formatRegionPath(path))}>
             저장
           </CtaButton>
@@ -162,9 +160,9 @@ function RegionFilterDrawerBody({
 
 /**
  * 지역 필터 드로워. 앱 컬럼 전체를 덮으며 오른쪽에서 슬라이드로 열린다.
- * 시/도부터 잎(동·읍·면 등)까지 두 열을 오가며 깊이 있게 내려가 지역을
- * 고르고, 잎을 선택하면 저장 버튼으로 필터를 적용한다. 뒤로가기 버튼·
- * 배경·Esc로 닫는다. (공통 UI 지역 필터 드로워)
+ * 시/도 · 구·시 · 동·구 세 열을 나란히 두고, 왼쪽에서 고르면 오른쪽 열에
+ * 하위 지역이 채워진다. 3단계(또는 그 전 잎)까지 고르면 저장 버튼으로
+ * 필터를 적용한다. 뒤로가기 버튼·배경·Esc로 닫는다. (공통 UI 지역 필터 드로워)
  */
 export function RegionFilterDrawer({
   open,
