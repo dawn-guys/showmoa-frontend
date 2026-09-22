@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   parseAsBoolean,
@@ -12,9 +12,16 @@ import { Header } from "@/app/_components/header";
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
 import { RegionFilterDrawer } from "@/shared/components/region-filter-drawer";
 import { GENRE_FILTER_OPTIONS } from "@/shared/constants/genre";
+import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
+import { searchPerformances } from "@/shared/lib/search-performance";
+import { MOCK_SEARCH_PERFORMANCES } from "@/shared/mocks/search";
 import { SearchBar } from "./search-bar";
 import { SearchFilterBar } from "./search-filter-bar";
 import { SearchFilterChip } from "./search-filter-chip";
+import { SearchResultList } from "./search-result-list";
+
+/** 인풋 onChange 디바운스 지연(ms). 마지막 입력 뒤 이 시간이 지나면 검색한다. */
+const SEARCH_DEBOUNCE_MS = 300;
 
 /** 헤더↔검색창 전환에 쓰는 부드러운 전환(검색창과 동일 값). */
 const TRANSITION = { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as const;
@@ -23,13 +30,16 @@ const TRANSITION = { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as const;
  * 검색 화면 본문. 검색창에 포커스가 들어가면 헤더가 사라지고 검색창이
  * 그 자리로 올라오는 검색 모드로 전환된다(뒤로가기 화살표로 복귀).
  * 장르 필터 버튼으로 바텀 시트를 열어 장르를 선택하며, 적용된 필터는
- * 칩으로 노출한다. 검색 결과 목록은 디자인 확정 후 후속 작업이다.
+ * 칩으로 노출한다. 인풋 값이 바뀔 때마다 디바운스로 제목이 겹치는 공연을
+ * 찾아 결과 목록으로 보여준다.
  */
 export function SearchScreen() {
   // 검색 모드(포커스) 여부. 인풋 포커스로 진입, 뒤로가기 화살표로 이탈한다.
   const [active, setActive] = useState(false);
   // 인풋에 입력 중인 검색어(제어 컴포넌트).
   const [query, setQuery] = useState("");
+  // 디바운스가 끝난 뒤 확정되는 검색어. 결과 목록은 이 값으로 계산한다.
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   // 적용된 장르 필터. 새로고침·뒤로가기에도 유지되도록 URL에 저장한다.
   const [genre, setGenre] = useQueryState(
@@ -60,9 +70,26 @@ export function SearchScreen() {
     (label): label is string => label !== null,
   );
 
-  const handleSubmit = () => {
-    // Phase 1: 검색 결과 목록 디자인 확정 전이라 질의 확정만 담당한다.
+  // 인풋 onChange를 디바운스해 검색어를 확정한다(util로 뺀 디바운스 훅 사용).
+  const debouncedSearch = useDebouncedCallback(
+    setDebouncedQuery,
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  const handleChange = (value: string) => {
+    setQuery(value); // 인풋은 즉시 반영(제어 컴포넌트)
+    debouncedSearch.run(value); // 결과 계산은 디바운스
   };
+
+  // 돋보기/Enter로 검색하면 대기 중인 디바운스를 건너뛰고 즉시 확정한다.
+  const handleSubmit = () => debouncedSearch.flush();
+
+  // MOCK: 확정된 검색어와 제목이 겹치는 공연을 장르 필터와 함께 좁힌다.
+  const results = useMemo(
+    () =>
+      searchPerformances(MOCK_SEARCH_PERFORMANCES, debouncedQuery, { genre }),
+    [debouncedQuery, genre],
+  );
 
   return (
     <div className="relative">
@@ -92,15 +119,18 @@ export function SearchScreen() {
           onActivate={() => setActive(true)}
           onDeactivate={() => setActive(false)}
           value={query}
-          onChange={setQuery}
+          onChange={handleChange}
           onSubmit={handleSubmit}
         />
 
         {active ? (
-          // 검색 모드: 필터 버튼 영역은 감추고 적용된 필터만 칩으로 노출한다.
-          chipLabels.length > 0 && (
-            <SearchFilterChip labels={chipLabels} className="self-start" />
-          )
+          // 검색 모드: 필터 버튼 영역은 감추고 적용된 필터 칩과 결과 목록을 노출한다.
+          <>
+            {chipLabels.length > 0 && (
+              <SearchFilterChip labels={chipLabels} className="self-start" />
+            )}
+            <SearchResultList results={results} />
+          </>
         ) : (
           <SearchFilterBar
             chipLabels={chipLabels}
