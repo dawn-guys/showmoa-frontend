@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { GpsBoldIcon } from "@solar-icons/react";
+import { LocateFixed } from "lucide-react";
 import type { MapVenue } from "@/app/(tabs)/map/_types";
 import {
   buildMapOptions,
@@ -197,10 +197,16 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         onReady={() => setScriptLoaded(true)}
         onError={() => onStatusRef.current("error")}
       />
-      {/* 지도 영역을 차지하는 래퍼. 네이버 지도가 내부 컨테이너에 position:relative를
-          덮어써 absolute inset-0의 높이가 무너지므로, 래퍼가 크기를 잡고 실제 지도
-          컨테이너는 size-full(높이 100%)로 채운다. */}
-      <div className="absolute inset-0">
+      {/* 지도 영역을 차지하는 래퍼. 높이 = 전체 높이 + 20px - (하단 나브 + 시트 기본 높이).
+          네이버 지도가 내부 컨테이너에 position:relative를 덮어써 높이가 무너지므로,
+          래퍼가 크기를 잡고 실제 지도 컨테이너는 size-full(높이 100%)로 채운다. */}
+      <div
+        className="absolute inset-x-0 top-0"
+        style={{
+          height:
+            "calc(100dvh + 20px - (var(--spacing-bottom-nav) + var(--spacing-venue-sheet)))",
+        }}
+      >
         <div
           ref={containerRef}
           data-naver-map
@@ -214,9 +220,9 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         type="button"
         aria-label="현재 위치로 이동"
         onClick={moveToCurrentLocation}
-        className="absolute right-4 bottom-[calc(var(--spacing-bottom-nav)+154px)] flex size-11 items-center justify-center rounded-full bg-white text-primary shadow-md outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+        className="absolute right-4 bottom-[calc(var(--spacing-bottom-nav)+var(--spacing-venue-sheet)+16px)] flex size-11 items-center justify-center rounded-full bg-white text-primary shadow-[0_0_2px_0_rgb(0_0_0/0.4)] outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
       >
-        <GpsBoldIcon size={24} />
+        <LocateFixed size={24} strokeWidth={2} aria-hidden />
       </button>
     </>
   );

@@ -27,6 +27,11 @@ export function buildMapOptions(
   const options: naver.maps.MapOptions = {
     center,
     zoom: DEFAULT_ZOOM,
+    // 포트폴리오용: 네이버 저작권·로고·스케일바 컨트롤을 숨긴다.
+    // (실서비스 배포 시에는 약관상 다시 노출해야 함)
+    logoControl: false,
+    mapDataControl: false,
+    scaleControl: false,
   };
   if (NAVER_MAP_STYLE_ID) {
     // 타입 정의에 gl/customStyleId가 없어 확장 필드로 지정한다.

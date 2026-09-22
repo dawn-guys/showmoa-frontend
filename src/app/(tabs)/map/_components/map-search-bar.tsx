@@ -28,7 +28,7 @@ export function MapSearchBar({ onSearch, searching }: MapSearchBarProps) {
     <form
       role="search"
       onSubmit={handleSubmit}
-      className="group flex h-12 items-center gap-1 rounded-full border-2 border-transparent bg-white pr-1 pl-5 shadow-md transition-colors focus-within:border-primary"
+      className="group flex h-11 items-center gap-1 rounded-[14px] border-2 border-[#E6E6E6] bg-white pr-1 pl-3.75 transition-colors focus-within:border-primary"
     >
       <input
         type="search"

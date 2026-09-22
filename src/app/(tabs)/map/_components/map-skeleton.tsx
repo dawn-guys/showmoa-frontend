@@ -22,7 +22,7 @@ export function MapSkeleton() {
       </span>
 
       {/* 바텀 시트 스켈레톤 */}
-      <div className="absolute inset-x-0 bottom-[calc(var(--spacing-bottom-nav)+env(safe-area-inset-bottom))] mx-auto flex h-[138px] max-w-app flex-col gap-4 rounded-t-2xl bg-card px-4 pt-2.5">
+      <div className="absolute inset-x-0 bottom-[calc(var(--spacing-bottom-nav)+env(safe-area-inset-bottom))] mx-auto flex h-venue-sheet max-w-app flex-col gap-4 rounded-t-2xl bg-card px-4 pt-2.5">
         {/* 드래그 핸들 */}
         <span aria-hidden className="mx-auto h-1 w-9 rounded-full bg-primary" />
         <Skeleton className="h-5 w-40" aria-hidden />
