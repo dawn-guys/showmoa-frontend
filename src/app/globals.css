@@ -192,6 +192,15 @@
     -webkit-appearance: none;
   }
 
+  /* 네이버 지도 타일은 <img>로 그려지는데, Tailwind Preflight의
+     img { max-width:100%; height:auto } 리셋이 타일 크기를 어긋나게 만들어
+     지도가 회색으로 보인다. 지도 컨테이너 내부 이미지·캔버스는 리셋을 되돌린다. */
+  [data-naver-map] img,
+  [data-naver-map] canvas {
+    max-width: none;
+    height: auto;
+  }
+
   /* 모든 인풋의 캐럿(입력 커서)은 주조색으로 표시한다. */
   input:not([type="checkbox"]):not([type="radio"]),
   textarea {
