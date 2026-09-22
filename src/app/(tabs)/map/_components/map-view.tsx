@@ -1,7 +1,6 @@
 /// <reference types="navermaps" />
 "use client";
 
-import Script from "next/script";
 import {
   forwardRef,
   useCallback,
@@ -14,7 +13,6 @@ import { LocateFixed } from "lucide-react";
 import type { MapVenue } from "@/app/(tabs)/map/_types";
 import {
   buildMapOptions,
-  buildMapScriptUrl,
   buildUserMarkerContent,
   buildVenueMarkerContent,
   DEFAULT_CENTER,
@@ -40,8 +38,6 @@ export interface MapViewHandle {
 }
 
 interface MapViewProps {
-  /** 네이버 지도 클라이언트 ID(키). */
-  clientId: string;
   venues: MapVenue[];
   selectedVenueId: string | null;
   onSelectVenue: (id: string) => void;
@@ -49,11 +45,12 @@ interface MapViewProps {
 }
 
 /**
- * 네이버 지도 캔버스. 스크립트를 로드해 지도를 만들고, 공연장 마커와
- * 사용자 위치 마커를 관리한다. 부모는 ref로 locate()/panToVenue()를 호출한다.
+ * 네이버 지도 캔버스. (tabs) 셸에서 한 번 로드한 SDK가 준비되면 지도를 만들고,
+ * 공연장 마커와 사용자 위치 마커를 관리한다. 부모는 ref로 locate()/panToVenue()를
+ * 호출한다.
  */
 export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
-  { clientId, venues, selectedVenueId, onSelectVenue, onStatusChange },
+  { venues, selectedVenueId, onSelectVenue, onStatusChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,7 +58,10 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const userMarkerRef = useRef<naver.maps.Marker | null>(null);
 
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+  // 재진입 시 SDK가 이미 로드돼 있으면 즉시 준비 완료로 본다(파생값은 렌더에서 계산).
+  const [scriptLoaded, setScriptLoaded] = useState(
+    () => typeof naver !== "undefined" && !!naver.maps,
+  );
   const [mapCreated, setMapCreated] = useState(false);
 
   // 리스너·마커 초기 상태에서 최신 값을 참조하기 위한 ref들.
@@ -81,6 +81,23 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       delete window.navermap_authFailure;
     };
   }, []);
+
+  // (tabs) 셸에서 로드한 SDK가 준비될 때까지 대기한다. 이미 로드돼 있으면
+  // 초기값이 true라 이 effect는 건너뛴다. 10초 내 안 뜨면 에러로 처리한다.
+  useEffect(() => {
+    if (scriptLoaded) return;
+    let tries = 0;
+    const id = setInterval(() => {
+      if (typeof naver !== "undefined" && naver.maps) {
+        clearInterval(id);
+        setScriptLoaded(true);
+      } else if (++tries > 100) {
+        clearInterval(id);
+        onStatusRef.current("error");
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [scriptLoaded]);
 
   // 스크립트 로드 완료 후 지도 인스턴스를 한 번만 생성한다.
   useEffect(() => {
@@ -190,13 +207,6 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
   return (
     <>
-      <Script
-        id="naver-maps-sdk"
-        src={buildMapScriptUrl(clientId)}
-        strategy="afterInteractive"
-        onReady={() => setScriptLoaded(true)}
-        onError={() => onStatusRef.current("error")}
-      />
       {/* 지도 영역을 차지하는 래퍼. 높이 = 전체 높이 + 20px - (하단 나브 + 시트 기본 높이).
           네이버 지도가 내부 컨테이너에 position:relative를 덮어써 높이가 무너지므로,
           래퍼가 크기를 잡고 실제 지도 컨테이너는 size-full(높이 100%)로 채운다. */}
