@@ -61,6 +61,10 @@
      The home-indicator safe area is added separately via pb-safe. */
   --spacing-bottom-nav: 62px; /* h-bottom-nav, pb-bottom-nav */
 
+  /* Map venue bottom sheet default (collapsed) height. Shared by the sheet,
+     its skeleton, the map viewport, and the current-location button. */
+  --spacing-venue-sheet: 180px; /* h-venue-sheet */
+
   /* Mobile typography scale from the Figma design system.
      Line height, weight, and letter spacing are not in the design doc;
      these are agreed defaults (headings 1.4, body 1.5; H 600, body 400;
@@ -190,6 +194,22 @@
 
   input[type="search"]::-webkit-search-cancel-button {
     -webkit-appearance: none;
+  }
+
+  /* 네이버 지도 타일은 <img>로 그려지는데, Tailwind Preflight의
+     img { max-width:100%; height:auto } 리셋이 타일 크기를 어긋나게 만들어
+     지도가 회색으로 보인다. 지도 컨테이너 내부 이미지·캔버스는 리셋을 되돌린다. */
+  [data-naver-map] img,
+  [data-naver-map] canvas {
+    max-width: none;
+    height: auto;
+  }
+
+  /* 포트폴리오용: logoControl:false로도 강제로 남는 네이버 로고를 숨긴다.
+     로고는 legal.html로 연결되는 앵커라 이를 타깃한다.
+     (실서비스 배포 시에는 약관상 다시 노출해야 함) */
+  [data-naver-map] a[href*="legal.html"] {
+    display: none !important;
   }
 
   /* 모든 인풋의 캐럿(입력 커서)은 주조색으로 표시한다. */

@@ -1,8 +1,5 @@
-// PLACEHOLDER: screen not implemented. See docs/spec/map.md
+import { MapScreen } from "@/app/(tabs)/map/_components/map-screen";
+
 export default function MapPage() {
-  return (
-    <main className="pb-safe-nav">
-      <h1>Map</h1>
-    </main>
-  );
+  return <MapScreen />;
 }
