@@ -29,7 +29,7 @@ export function HeartButton({
       aria-pressed={isLiked}
       aria-label={isLiked ? "찜 해제" : "찜하기"}
       className={cn(
-        "flex size-11 items-center justify-center rounded-full transition-transform outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90",
+        "flex size-11 items-center justify-center rounded-full transition-transform outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:scale-90",
         className,
       )}
     >
