@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/shared/hooks/useAuth";
-import { WishlistGuest } from "./wishlist-guest";
+import { GuestGate } from "@/shared/components/guest-gate";
 import { WishlistLikedView } from "./wishlist-liked-view";
 
 /**
@@ -16,7 +16,7 @@ export function WishlistView() {
   if (!isLoading && !isLoggedIn) {
     return (
       <div className="flex min-h-[calc(100dvh-5rem-var(--spacing-bottom-nav))] flex-col items-center justify-center">
-        <WishlistGuest />
+        <GuestGate srHeading="좋아요 한 공연" />
       </div>
     );
   }
