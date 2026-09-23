@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { cn } from "cn";
@@ -33,6 +33,13 @@ function MonthWheel({
   onChange: (month: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // 휠 이벤트 핸들러가 최신 선택 값을 참조하도록 ref로 보관한다.
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+  // 휠 한 번당 한 칸만 이동하도록 잠깐 잠근다(연속 휠 이벤트 무시).
+  const wheelLock = useRef(false);
 
   // 마운트 시(시트 열릴 때) 초기 선택 월을 가운데로 스크롤한다.
   useLayoutEffect(() => {
@@ -41,7 +48,7 @@ function MonthWheel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 스크롤이 멈추면 가운데에 가장 가까운 월을 선택 값으로 확정한다.
+  // 스크롤(터치/트랙패드 드래그)이 멈추면 가운데 월을 선택 값으로 확정한다.
   const settle = useDebouncedCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -58,12 +65,39 @@ function MonthWheel({
     });
   };
 
+  // 마우스 휠: 네이티브 휠은 한 번에 ~100px(2~3칸)를 스크롤하므로, 이벤트를
+  // 가로채 한 번당 한 칸만 이동시킨다. (React onWheel은 passive라 preventDefault가
+  // 안 먹으므로 non-passive 리스너를 직접 붙인다.)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (wheelLock.current) return;
+      wheelLock.current = true;
+
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const next = Math.min(11, Math.max(0, valueRef.current + dir));
+      if (next !== valueRef.current) selectMonth(next);
+
+      window.setTimeout(() => {
+        wheelLock.current = false;
+      }, 140);
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+    // selectMonth는 안정적인 onChange/ref만 사용하므로 마운트 시 한 번만 등록한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="relative h-[120px]">
       {/* 선택 영역(가운데 밴드) */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-10 h-10 rounded-[5px] bg-[#d8d8d8]"
+        className="pointer-events-none absolute inset-x-0 top-10 h-10 rounded-[5px] bg-[#d8d8d8]/6"
       />
       <div
         ref={scrollRef}
@@ -86,7 +120,7 @@ function MonthWheel({
               className={cn(
                 "flex h-10 w-full snap-center items-center justify-center outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 selected
-                  ? "text-xl font-medium text-background"
+                  ? "text-xl font-medium text-foreground"
                   : "text-base font-medium text-muted-foreground",
               )}
             >
@@ -114,14 +148,14 @@ function MonthPickerBody({
     <>
       {/* 제목 + 닫기 버튼 */}
       <div className="flex items-center justify-between">
-        <DialogPrimitive.Title className="text-[1.375rem] leading-tight font-semibold text-foreground">
+        <DialogPrimitive.Title className="text-[20px] leading-tight font-semibold text-foreground">
           월 선택
         </DialogPrimitive.Title>
         <DialogPrimitive.Close
           aria-label="월 선택 닫기"
           className="-mr-1.5 flex size-11 items-center justify-center rounded-full text-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:bg-white/10"
         >
-          <X size={24} />
+          <X size={24} color="#888888" />
         </DialogPrimitive.Close>
       </div>
 
