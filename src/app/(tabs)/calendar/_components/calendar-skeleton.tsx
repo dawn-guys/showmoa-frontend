@@ -13,16 +13,21 @@ export function CalendarSkeleton() {
     <div
       aria-busy="true"
       aria-label="달력 불러오는 중"
-      className="flex flex-col gap-4"
+      // MonthGrid와 같은 자리·간격을 차지해 로딩 후 레이아웃이 튀지 않게 한다.
+      className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden"
     >
       {Array.from({ length: WEEKS }).map((_, week) => (
-        <div key={week} className="flex gap-1">
+        <div key={week} className="flex shrink-0 gap-[2px]">
           {Array.from({ length: DAYS }).map((__, day) => (
-            <Skeleton
+            // CalendarDayCell과 같은 구성. 날짜 숫자 자리는 높이만 비워 두어
+            // 로딩 후 행 높이가 바뀌지 않게 한다.
+            <div
               key={day}
-              aria-hidden
-              className="h-[86px] flex-1 rounded-[2px]"
-            />
+              className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-0.5"
+            >
+              <div className="h-5.5" />
+              <Skeleton aria-hidden className="h-[86px] w-full rounded-[3px]" />
+            </div>
           ))}
         </div>
       ))}

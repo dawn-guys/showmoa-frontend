@@ -62,10 +62,8 @@ export function WeekdayHeader({
             >
               <span
                 className={cn(
-                  "border-b-2 pb-0.5 text-body1 font-semibold",
-                  selected
-                    ? "border-primary text-primary"
-                    : cn("border-transparent", weekendClass(index)),
+                  "text-body1 font-semibold",
+                  selected ? "text-primary" : cn(weekendClass(index)),
                 )}
               >
                 {WEEKDAY_LABELS[index]}
