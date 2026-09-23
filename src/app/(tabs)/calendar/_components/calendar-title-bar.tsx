@@ -22,7 +22,7 @@ export function CalendarTitleBar({
   onToggle,
 }: CalendarTitleBarProps) {
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex items-center gap-5 px-[2px]">
       <button
         type="button"
         onClick={onOpenPicker}

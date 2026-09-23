@@ -1,6 +1,7 @@
 "use client";
 
 import { format, isSameDay } from "date-fns";
+import { ko } from "date-fns/locale";
 import { cn } from "cn";
 import { WEEKDAY_LABELS } from "../_lib/calendar";
 
@@ -43,7 +44,11 @@ export function WeekdayHeader({
   // 주간 뷰: 각 요일이 날짜 선택 버튼.
   if (weekDays && onSelectDate) {
     return (
-      <div role="group" aria-label="요일 선택" className="flex">
+      <div
+        role="group"
+        aria-label="요일 선택"
+        className="-mx-4 flex border-b-2 border-[#201F1F] px-4"
+      >
         {weekDays.map((day, index) => {
           const selected = selectedDate ? isSameDay(day, selectedDate) : false;
           return (
@@ -51,7 +56,7 @@ export function WeekdayHeader({
               key={day.toISOString()}
               type="button"
               aria-pressed={selected}
-              aria-label={format(day, "M월 d일 EEEE")}
+              aria-label={format(day, "M월 d일 EEEE", { locale: ko })}
               onClick={() => onSelectDate(day)}
               className="flex flex-1 flex-col items-center py-[15px] outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:opacity-80"
             >
@@ -74,7 +79,7 @@ export function WeekdayHeader({
 
   // 월간 뷰: 정적 라벨. 오늘 요일만 주조색으로 강조.
   return (
-    <div className="flex" aria-hidden>
+    <div className="-mx-4 flex border-b-2 border-[#201F1F] px-4" aria-hidden>
       {WEEKDAY_LABELS.map((label, index) => (
         <span
           key={label}

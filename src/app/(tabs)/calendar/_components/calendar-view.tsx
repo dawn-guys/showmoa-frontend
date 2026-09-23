@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
+import { ko } from "date-fns/locale";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { GuestGate } from "@/shared/components/guest-gate";
@@ -59,7 +60,8 @@ function CalendarLoggedIn() {
     year === today.getFullYear() && month === today.getMonth();
   const referenceDate =
     viewMode === "week" || isCurrentMonth ? today : new Date(year, month, 1);
-  const label = format(referenceDate, "EEEE, MMMM d");
+  // 예: "수요일, 9월 23일". 영어 대신 한글 형식으로 가독성을 높인다.
+  const label = format(referenceDate, "EEEE, M월 d일", { locale: ko });
 
   const handleToggleMode = () => {
     setViewMode((mode) => (mode === "month" ? "week" : "month"));

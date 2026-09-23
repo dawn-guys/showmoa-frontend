@@ -4,9 +4,6 @@ import { format } from "date-fns";
 import { cn } from "cn";
 import type { CalendarPerformance } from "../_types";
 
-/** 한 셀에 최대로 보여줄 공연 칩 개수. 이보다 많으면 잘려서 숨는다. */
-const MAX_CHIPS = 3;
-
 interface CalendarDayCellProps {
   date: Date;
   /** 표시 중인 달에 속한 날짜인지. false면 흐리게 처리하고 누를 수 없다. */
@@ -27,7 +24,7 @@ function PerformanceChip({
 }) {
   return (
     <span
-      className="flex h-4 items-center border-l-2 pl-1"
+      className="flex h-4 shrink-0 items-center border-l-2 pl-1"
       style={{ borderColor: performance.color }}
     >
       {/* 색상은 보조 수단이므로 제목 텍스트는 항상 읽히게 두고, 잘린 제목의
@@ -57,10 +54,9 @@ function DayCard({
         dimmed && "opacity-50",
       )}
     >
+      {/* 칩을 모두 렌더하고, 카드 높이를 넘치면 overflow-hidden으로 잘라 숨긴다. */}
       {!dimmed &&
-        performances
-          .slice(0, MAX_CHIPS)
-          .map((p) => <PerformanceChip key={p.id} performance={p} />)}
+        performances.map((p) => <PerformanceChip key={p.id} performance={p} />)}
     </span>
   );
 }
