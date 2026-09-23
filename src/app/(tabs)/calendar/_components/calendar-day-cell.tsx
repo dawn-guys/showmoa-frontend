@@ -50,7 +50,7 @@ function DayCard({
   return (
     <span
       className={cn(
-        "flex h-[86px] w-full flex-col gap-0.5 overflow-hidden rounded-[2px] bg-[#242424] p-0.5",
+        "flex h-[86px] w-full flex-col gap-0.5 overflow-hidden rounded-[3px] bg-[#242424] p-0.5",
         dimmed && "opacity-50",
       )}
     >
@@ -77,11 +77,11 @@ export function CalendarDayCell({
   // 다른 달 날짜: 흐리게, 누를 수 없음.
   if (!isCurrentMonth) {
     return (
-      <div className="flex min-w-0 flex-1 flex-col items-center gap-2.5 px-0.5">
-        <DayCard performances={performances} dimmed />
-        <span className="text-body2 font-semibold text-[#6b6b6b]">
+      <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-0.5">
+        <span className="flex h-5.5 w-max items-center justify-center text-body2 font-semibold text-[#6b6b6b]">
           {dayNumber}
         </span>
+        <DayCard performances={performances} dimmed />
       </div>
     );
   }
@@ -91,17 +91,17 @@ export function CalendarDayCell({
       type="button"
       onClick={() => onSelect(date)}
       aria-label={`${format(date, "M월 d일")}, 공연 ${performances.length}건`}
-      className="flex min-w-0 flex-1 flex-col items-center gap-2.5 rounded-[2px] px-0.5 outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:opacity-80"
+      className="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-[2px] px-0.5 outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:opacity-80"
     >
-      <DayCard performances={performances} />
       <span
         className={cn(
-          "text-body2 font-semibold",
+          "flex h-5.5 w-max items-center justify-center text-body2 font-semibold",
           isToday ? "text-primary" : "text-[#bfbfbf]",
         )}
       >
         {dayNumber}
       </span>
+      <DayCard performances={performances} />
     </button>
   );
 }

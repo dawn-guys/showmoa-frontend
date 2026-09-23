@@ -34,10 +34,10 @@ export function MonthGrid({
   return (
     <div
       // 넘칠 경우에만 스크롤. 스크롤 UI는 숨긴다(스펙).
-      className="flex min-h-0 flex-1 [scrollbar-width:none] flex-col gap-1 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
+      className="flex min-h-0 flex-1 [scrollbar-width:none] flex-col gap-1.5 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
     >
       {weeks.map((week) => (
-        <div key={week[0].toISOString()} className="flex shrink-0 gap-1">
+        <div key={week[0].toISOString()} className="flex shrink-0 gap-[2px]">
           {week.map((day) => (
             <CalendarDayCell
               key={day.toISOString()}
