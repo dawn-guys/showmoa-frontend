@@ -1,12 +1,14 @@
 import { Header } from "@/app/_components/header";
 import { SiteFooter } from "@/app/_components/site-footer";
 import { HomeSections } from "./_components/home-sections";
+import { HomeSplash } from "./_components/home-splash";
 
 // See docs/spec/home.md
 export default function HomePage() {
   return (
     <>
-      {/* TODO: 홈-비로그인 스플래시 애니메이션(하루 1회) — 별도 작업에서 구현 */}
+      {/* 앱 첫 진입 스플래시(24시간 1회). 끝나면 페이드아웃하며 홈을 노출한다. */}
+      <HomeSplash />
       <Header />
       <main>
         <h1 className="sr-only">쇼모아 홈</h1>

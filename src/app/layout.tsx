@@ -26,11 +26,19 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content", // Android Chrome: shrink layout when keyboard opens
 };
 
+// 스플래시를 이 탭 세션에서 이미 봤으면(sessionStorage) 페인트 전에 오버레이를
+// 숨기는 스타일을 주입한다. 서버는 sessionStorage를 읽을 수 없어 오버레이를 항상
+// SSR로 그리는데, 새로고침 시 그것이 잠깐 비쳤다 사라지는 깜빡임을 이 스크립트가
+// 막는다. 플래그는 최초 재생 시 home-splash가 설정한다.
+const splashSkipScript = `(function(){try{if(sessionStorage.getItem('showmoa:splash:seen')){var s=document.createElement('style');s.textContent='[data-splash-overlay]{display:none!important}';document.head.appendChild(s);}}catch(e){}})();`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={pretendard.variable}>
       {/* black gutter behind the app column so #121212 stands out above 480px */}
       <body className="bg-black font-sans text-foreground antialiased">
+        {/* 스플래시 pre-paint 스킵 스크립트: 앱 마크업보다 먼저 실행돼야 한다. */}
+        <script dangerouslySetInnerHTML={{ __html: splashSkipScript }} />
         {/* fixed descendants (bottom nav, toasts) rely on this element having no transform */}
         <div className="mx-auto min-h-dvh w-full max-w-app min-w-[320px] bg-background">
           <Providers>{children}</Providers>
