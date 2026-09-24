@@ -15,9 +15,9 @@ import { cn } from "cn";
 const NAV_ITEMS = [
   { href: "/", label: "홈", Icon: HomeLineDuotoneIcon },
   { href: "/map", label: "지도", Icon: MapPointLineDuotoneIcon },
+  { href: "/search", label: "검색", Icon: MagnifierLineDuotoneIcon },
   { href: "/calendar", label: "달력", Icon: CalendarLineDuotoneIcon },
   { href: "/wishlist", label: "찜", Icon: HeartAngleLineDuotoneIcon },
-  { href: "/search", label: "검색", Icon: MagnifierLineDuotoneIcon },
 ] as const;
 
 /**

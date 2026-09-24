@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useQueryState } from "nuqs";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Toast } from "@/shared/components/toast";
 import type { MapVenue } from "@/app/(tabs)/map/_types";
@@ -34,16 +35,33 @@ export function MapScreen() {
     !authLoading && !isLoggedIn,
   );
 
+  // 디테일 화살표 딥링크로 넘어온 공연장 id(?venueId=). 지도의 공연장 엔티티와 공유하는 키.
+  const [venueIdParam] = useQueryState("venueId");
+
   const mapViewRef = useRef<MapViewHandle>(null);
   const [mapStatus, setMapStatus] = useState<MapStatus>("loading");
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // 딥링크 공연장으로의 최초 이동을 한 번만 수행하기 위한 플래그.
+  const didFocusVenueRef = useRef(false);
 
   const venueList = venues ?? EMPTY_VENUES;
 
-  // 선택값이 없으면 첫 공연장을 기본 선택으로 파생한다(effect 없이 렌더에서 계산).
-  const effectiveSelectedId = selectedVenueId ?? venueList[0]?.id ?? null;
+  // 선택값이 없으면 딥링크 공연장 → 첫 공연장 순으로 기본 선택을 파생한다(effect 없이 렌더에서 계산).
+  const effectiveSelectedId =
+    selectedVenueId ?? venueIdParam ?? venueList[0]?.id ?? null;
+
+  // 지도가 준비되고 목록이 로드되면 딥링크 공연장 위치로 한 번 이동한다(선택 상태는 위에서 파생).
+  useEffect(() => {
+    if (didFocusVenueRef.current || mapStatus !== "ready" || !venueIdParam) {
+      return;
+    }
+    const target = venueList.find((venue) => venue.id === venueIdParam);
+    if (!target) return;
+    didFocusVenueRef.current = true;
+    mapViewRef.current?.panToVenue(target);
+  }, [mapStatus, venueIdParam, venueList]);
 
   // 검색 실패 토스트는 잠시 후 자동으로 사라진다.
   useEffect(() => {

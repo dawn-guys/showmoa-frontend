@@ -5,14 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TextField } from "@/shared/components/text-field";
 import { PasswordField } from "@/shared/components/password-field";
 import { CtaButton } from "@/shared/components/cta-button";
-import { Toast } from "@/shared/components/toast";
+import { AnimatedToast } from "@/shared/components/toast";
 import { GoogleLoginButton } from "./_components/google-login-button";
 import { KakaoLoginButton } from "./_components/kakao-login-button";
 import { cn } from "cn";
@@ -85,23 +84,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* 상단 에러 토스트: 위에서 스르륵 내려왔다가 일정 시간 뒤 다시 올라가 사라진다.
-          고정 요소는 앱 컬럼 폭으로 제한한다. reduced-motion은 전역 MotionConfig가 처리. */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key="login-toast"
-            id={TOAST_ID}
-            className="fixed inset-x-0 top-10 z-50 mx-auto flex max-w-app justify-center px-4"
-            initial={{ y: "-150%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "-150%", opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-          >
-            <Toast variant="error" message={toast} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 상단 에러 토스트: 위에서 스르륵 내려왔다가 일정 시간 뒤 다시 올라가 사라진다. */}
+      <AnimatedToast
+        open={!!toast}
+        message={toast ?? ""}
+        variant="error"
+        id={TOAST_ID}
+      />
 
       <header className="flex h-17 items-center px-4">
         <button

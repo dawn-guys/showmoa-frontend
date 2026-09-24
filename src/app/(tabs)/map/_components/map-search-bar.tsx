@@ -47,7 +47,7 @@ export function MapSearchBar({ onSearch, searching }: MapSearchBarProps) {
         className="flex size-10 shrink-0 items-center justify-center rounded-full text-[#121212] outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
       >
         {searching ? (
-          <LoadingSpinner size={22} label="검색 중" />
+          <LoadingSpinner className="size-[22px]" label="검색 중" />
         ) : (
           <Search size={22} />
         )}
