@@ -47,13 +47,16 @@ const MOCK_CAST = [
   "배현우",
 ];
 
+// MOCK: 지도 목업 공연장(venue-sejong)과 동일 엔티티로 맞춰 /map?venueId= 딥링크가
+// 해당 공연장을 선택·표시하도록 한다(id·이름·좌표를 MOCK_MAP_VENUES와 공유).
 const MOCK_VENUE_DETAIL: VenueDetail = {
-  name: "아이원 플러스",
-  roadAddress: "서울특별시 서초구 효령로77길 14",
-  jibunAddress: "서울특별시 서초구 서초동 1338-1",
-  phone: "012-345-6789",
-  lat: 37.4842,
-  lng: 127.0106,
+  id: "venue-sejong",
+  name: "세종문화회관",
+  roadAddress: "서울특별시 종로구 세종대로 175",
+  jibunAddress: "서울특별시 종로구 세종로 81-3",
+  phone: "02-399-1000",
+  lat: 37.5726,
+  lng: 126.9762,
 };
 
 /** 요약 정보(홈 목업)에 상세 필드를 얹어 목업 상세 정보를 만든다. */

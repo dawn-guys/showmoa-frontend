@@ -19,7 +19,9 @@ export interface PerformanceSchedule {
 
 /** 공연장 상세 정보(주소·연락처·좌표). */
 export interface VenueDetail {
-  /** 건물명(예: 아이원 플러스) */
+  /** 공연장 식별자. 지도(/map?venueId=)와 공유하는 공연장 엔티티 키. */
+  id: string;
+  /** 건물명(예: 세종문화회관) */
   name: string;
   /** 도로명 주소 */
   roadAddress: string;

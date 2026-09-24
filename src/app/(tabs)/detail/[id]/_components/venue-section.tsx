@@ -47,7 +47,7 @@ export function VenueSection({ venue, onCopyAddress }: VenueSectionProps) {
       <div className="flex items-center justify-between">
         <h2 className="text-h1 font-semibold text-foreground">공연장 주소</h2>
         <Link
-          href={`/map?search=${encodeURIComponent(venue.roadAddress)}`}
+          href={`/map?venueId=${venue.id}`}
           aria-label="지도에서 공연장 위치 보기"
           className="-my-2.5 flex size-11 items-center justify-end rounded-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-60"
         >
