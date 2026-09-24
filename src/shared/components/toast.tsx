@@ -1,3 +1,6 @@
+"use client";
+
+import { AnimatePresence, motion } from "motion/react";
 import { cn } from "cn";
 
 type ToastVariant = "default" | "success" | "error";
@@ -38,6 +41,53 @@ export function Toast({ message, variant = "default", className }: ToastProps) {
     >
       {message}
     </div>
+  );
+}
+
+interface AnimatedToastProps {
+  /** 노출 여부. 자동 닫힘(타이머)은 사용하는 쪽에서 이 값을 토글해 제어한다. */
+  open: boolean;
+  /** 표시 문구 */
+  message: string;
+  /** 토스트 종류. 기본 "default" */
+  variant?: ToastVariant;
+  /** 컨테이너 id. 입력 등에서 aria-describedby로 참조할 때 넘긴다. */
+  id?: string;
+  /** 고정 컨테이너 위치 등 오버라이드(예: safe-area 기준 top). 기본은 상단 top-10. */
+  className?: string;
+}
+
+/**
+ * 상단 중앙에 고정되어 위에서 스르륵 내려왔다가 다시 올라가 사라지는 토스트.
+ * 여러 화면이 공통으로 쓰는 노출 애니메이션 + 앱 컬럼 폭 고정 + 위치를 캡슐화한다.
+ * reduced-motion은 전역 MotionConfig가 처리한다.
+ */
+export function AnimatedToast({
+  open,
+  message,
+  variant = "default",
+  id,
+  className,
+}: AnimatedToastProps) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="toast"
+          id={id}
+          className={cn(
+            "fixed inset-x-0 top-10 z-50 mx-auto flex max-w-app justify-center px-4",
+            className,
+          )}
+          initial={{ y: "-150%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "-150%", opacity: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+        >
+          <Toast message={message} variant={variant} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
