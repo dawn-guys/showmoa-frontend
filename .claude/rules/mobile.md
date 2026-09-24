@@ -34,7 +34,7 @@ src/app/layout.tsx and src/app/globals.css and are not repeated here.
 
 ## Overlays & Back Button
 
-- Every user-opened modal, bottom sheet, and drawer stores its open state in the URL via nuqs with history: 'push'.
+- Every user-opened modal, bottom sheet, and drawer stores its open state in the URL via nuqs with history: 'replace', so opening/closing does not push a history entry. Close them via backdrop, Esc, or an explicit close button — not the browser back button.
 - Scrollable content inside sheets and modals uses `overscroll-contain`.
 - Scroll locking comes from the shadcn (Base UI) primitive. Do not
   hand-roll `overflow: hidden` on body.

@@ -3,8 +3,12 @@
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
-import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
+import { parseAsString, useQueryState } from "nuqs";
 import { useAuth } from "@/shared/hooks/useAuth";
+import {
+  overlayUrlOptions,
+  useOverlayFlag,
+} from "@/shared/hooks/useOverlayFlag";
 import { GuestGate } from "@/shared/components/guest-gate";
 import type { CalendarViewMode } from "../_types";
 import { getPerformancesForDay } from "../_lib/calendar";
@@ -36,14 +40,12 @@ function CalendarLoggedIn() {
   // 하트로 캘린더(찜)에서 제외한 공연 id. 달력·목록에서 즉시 감춘다.
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
-  // 오버레이 열림 상태는 URL에 저장해 뒤로가기로 닫을 수 있게 한다.
-  const [pickerOpen, setPickerOpen] = useQueryState(
-    "picker",
-    parseAsBoolean.withDefault(false).withOptions({ history: "push" }),
-  );
+  // 오버레이 열림 상태는 URL에 저장하되, 히스토리에는 쌓지 않는다(공통 옵션).
+  const [pickerOpen, setPickerOpen] = useOverlayFlag("picker");
+  // 선택된 날짜(바텀 시트). 값이 문자열이라 훅 대신 공통 옵션을 그대로 쓴다.
   const [dayParam, setDayParam] = useQueryState(
     "day",
-    parseAsString.withOptions({ history: "push" }),
+    parseAsString.withOptions(overlayUrlOptions),
   );
 
   const performances = useMemo(

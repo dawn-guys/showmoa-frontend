@@ -338,3 +338,79 @@ rm src/app/(tabs)/map/_probe.ts
 
 > 핵심 원칙: **부수효과는 이펙트에, 판단 근거가 되는 상태 변경은 생명주기가 끝날 때 —
 > 그리고 SSR/하이드레이션 경계에선 항상 결정론적으로.**
+
+---
+
+## 2026-09-25 · 모달·바텀시트·드로워를 열고 닫을 때 브라우저 히스토리가 쌓임
+
+### 1. 증상
+
+- 모달·바텀시트·드로워를 여닫을 때마다 URL 뒤로가기 스택(history)에 항목이 하나씩 쌓임.
+- 오버레이 하나를 열었다 닫으면 뒤로가기를 두 번 눌러야 이전 화면으로 나가짐.
+  (열림 = push 1개, 닫힘 = push 1개) 여러 번 여닫으면 스택이 계속 불어남.
+
+### 2. 원인
+
+- 오버레이 열림 상태를 nuqs `useQueryState`로 URL 쿼리에 저장하는데, 옵션이
+  `history: "push"`로 잡혀 있었다.
+- nuqs에서 `history: "push"`는 값이 바뀔 때마다 `history.pushState`를 호출한다.
+  → 오버레이를 열 때(예: `?filter=true`) 한 번, 닫을 때(`?filter=` 제거) 또 한 번,
+  매 전환이 새 히스토리 엔트리가 됐다.
+- 원래 의도는 "모바일 뒤로가기 버튼으로 오버레이를 닫는" 패턴이었지만
+  (`.claude/rules/mobile.md`에도 그렇게 규정), 실제 UX에서는 뒤로가기 스택 오염이
+  더 거슬리는 문제였다.
+
+### 3. 진단
+
+```bash
+# 오버레이 open 상태를 URL로 다루는 지점 전수 조사
+rg 'history:\s*"push"' src
+```
+
+- 걸린 곳을 오버레이(모달/시트/드로워)와 그 외(퍼널 step, 필터 선택값)로 분류.
+- 오버레이만 문제 대상. 퍼널 `step`(회원가입·비밀번호 재설정)은 단계 네비게이션이라
+  뒤로가기로 이전 단계 이동이 되어야 하므로 push 유지가 맞고, `genre`/`region` 같은
+  필터 선택값은 애초에 기본값(replace)이라 무관.
+
+### 4. 해결
+
+오버레이 열림 상태 파라미터의 옵션을 `history: "push"` → `"replace"`로 변경.
+`replace`는 `history.replaceState`라 현재 엔트리를 덮어써 스택이 늘지 않는다.
+대신 오버레이는 뒤로가기가 아니라 **백드롭·Esc·닫기 버튼**으로 닫는다.
+
+바꾼 파라미터 (총 8곳):
+
+| 파일 | 파라미터 | 오버레이 |
+|---|---|---|
+| `src/app/_components/site-footer.tsx` | `policy` | 운영 정책 드로워 |
+| `src/app/setting/_components/setting-list.tsx` | `policy` | 운영 정책 드로워 |
+| `src/app/(tabs)/detail/[id]/_components/detail-screen.tsx` | `login` | 로그인 유도 모달 |
+| `src/app/(tabs)/wishlist/_components/wishlist-liked-view.tsx` | `filter` | 필터 바텀 시트 |
+| `src/app/(tabs)/search/_components/search-screen.tsx` | `filter` | 장르 필터 시트 |
+| `src/app/(tabs)/search/_components/search-screen.tsx` | `region-filter` | 지역 필터 드로워 |
+| `src/app/(tabs)/calendar/_components/calendar-view.tsx` | `picker` | 월 선택 시트 |
+| `src/app/(tabs)/calendar/_components/calendar-view.tsx` | `day` | 날짜 바텀 시트 |
+
+> `setting-list.tsx`의 로그아웃 모달(`logout`)은 이미 `replace`였다.
+
+함께 갱신:
+
+- 각 파일의 "뒤로가기로 닫음" 주석 → "히스토리에 쌓지 않음(replace)"으로 수정.
+- 프로젝트 규칙 `.claude/rules/mobile.md`의 오버레이 항목을
+  `history: 'replace'` 기준으로 갱신(백드롭·Esc·닫기 버튼으로 닫도록 명시).
+
+드로워 안의 "뒤로 가기" 화살표(`DialogPrimitive.Close`)는 `router.back()`이 아니라
+닫기 이벤트를 nuqs 세터로 흘려보내는 구조라, 이번 `replace` 설정이 그대로 적용된다.
+→ 화살표로 닫아도 히스토리가 안 쌓인다.
+
+### 5. 검증
+
+- `pnpm typecheck` / `eslint` 통과.
+- 오버레이 여닫기 후 뒤로가기 스택이 늘지 않는 것 확인.
+
+### 6. 교훈
+
+- **nuqs `history` 옵션은 그 상태가 "네비게이션"인지 "일시적 UI"인지로 정한다.**
+  단계 이동(퍼널)처럼 뒤로가기로 되짚어야 하면 `push`, 오버레이 개폐처럼 되짚을 필요가
+  없는 일시 상태면 `replace`.
+- URL로 상태를 관리하는 것과, 그 전환을 히스토리에 남길지는 별개의 결정이다.
