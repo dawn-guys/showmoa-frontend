@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { notFound } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { z } from "zod";
 import { TextField } from "@/shared/components/text-field";
 import { CtaButton } from "@/shared/components/cta-button";
-import { Toast } from "@/shared/components/toast";
+import { AnimatedToast } from "@/shared/components/toast";
 import { VerificationTimer } from "@/shared/components/verification-timer";
 import { cn } from "cn";
 
@@ -148,23 +148,13 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
 
   return (
     <div className="flex flex-1 flex-col px-4 pt-4 pb-5">
-      {/* 상단 에러 토스트: 위에서 내려왔다가 일정 시간 뒤 사라진다.
-          고정 요소는 앱 컬럼 폭으로 제한한다(reduced-motion은 전역 설정). */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key="verification-toast"
-            id={TOAST_ID}
-            className="fixed inset-x-0 top-10 z-50 mx-auto flex max-w-app justify-center px-4"
-            initial={{ y: "-150%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "-150%", opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-          >
-            <Toast variant="error" message={toast} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 상단 에러 토스트: 위에서 내려왔다가 일정 시간 뒤 사라진다. */}
+      <AnimatedToast
+        open={!!toast}
+        message={toast ?? ""}
+        variant="error"
+        id={TOAST_ID}
+      />
 
       {phase === "request" ? (
         <>
