@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
-import { HeartBoldIcon, SkipPreviousLineDuotoneIcon } from "@solar-icons/react";
+import { SkipPreviousLineDuotoneIcon } from "@solar-icons/react";
+import { HeartBurst, useHeartBurst } from "@/shared/components/heart-burst";
 
 interface DetailCtaProps {
   /** 현재 좋아요 상태 */
@@ -19,11 +18,11 @@ interface DetailCtaProps {
  */
 export function DetailCta({ isLiked, onToggleLike }: DetailCtaProps) {
   const router = useRouter();
-  // 하트 애니메이션 트리거. 좋아요로 "켜질" 때마다 key를 올려 새 하트를 띄운다.
-  const [burstKey, setBurstKey] = useState(0);
+  // 좋아요로 "켜질" 때마다 화면 중앙 하트 애니메이션을 재생한다.
+  const { triggerKey, burst } = useHeartBurst();
 
   const handleLike = () => {
-    if (!isLiked) setBurstKey((prev) => prev + 1);
+    if (!isLiked) burst();
     onToggleLike();
   };
 
@@ -43,27 +42,13 @@ export function DetailCta({ isLiked, onToggleLike }: DetailCtaProps) {
         onClick={handleLike}
         aria-pressed={isLiked}
         // 오렌지(주조색) 위 흰 글자는 디자인 기준. 20px/semibold 대형 텍스트라 대비 기준 충족.
-        className="relative flex h-14 flex-1 items-center justify-center overflow-hidden rounded-md bg-primary text-h1 font-semibold text-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-primary/90"
+        className="flex h-14 flex-1 items-center justify-center rounded-md bg-primary text-h1 font-semibold text-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-primary/90"
       >
         {isLiked ? "좋아요 취소" : "좋아요"}
-
-        {/* 좋아요로 전환 시 떠오르며 사라지는 하트 */}
-        <AnimatePresence>
-          {burstKey > 0 && (
-            <motion.span
-              key={burstKey}
-              aria-hidden
-              initial={{ opacity: 0, scale: 0.4, y: 0 }}
-              animate={{ opacity: [0, 1, 0], scale: 1.4, y: -28 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
-              className="pointer-events-none absolute text-foreground"
-            >
-              <HeartBoldIcon size={28} />
-            </motion.span>
-          )}
-        </AnimatePresence>
       </button>
+
+      {/* 좋아요로 전환 시 화면 중앙에서 떠오르며 사라지는 하트 */}
+      <HeartBurst triggerKey={triggerKey} />
     </div>
   );
 }
