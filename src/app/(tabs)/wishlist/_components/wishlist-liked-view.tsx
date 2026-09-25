@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { parseAsBoolean, useQueryState } from "nuqs";
 import { HamburgerMenuLinearIcon } from "@solar-icons/react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import type { GenreFilterOption } from "@/shared/constants/genre";
 import type { PerformanceStatus } from "@/app/(tabs)/_types";
 import { useWishlist } from "../_hooks/useWishlist";
@@ -33,11 +33,8 @@ export function WishlistLikedView() {
   // 검색으로 확정된 질의어. 돋보기/Enter로 커밋한다.
   const [query, setQuery] = useState("");
 
-  // 바텀 시트 열림 상태를 URL에 저장해 뒤로가기로 닫을 수 있게 한다.
-  const [filterOpen, setFilterOpen] = useQueryState(
-    "filter",
-    parseAsBoolean.withDefault(false).withOptions({ history: "push" }),
-  );
+  // 바텀 시트 열림 상태(공통 훅으로 히스토리 미누적).
+  const [filterOpen, setFilterOpen] = useOverlayFlag("filter");
 
   const liked = useMemo(
     () => (data ?? []).filter((p) => !removedIds.has(p.id)),

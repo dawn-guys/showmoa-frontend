@@ -2,17 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  parseAsBoolean,
-  parseAsString,
-  parseAsStringLiteral,
-  useQueryState,
-} from "nuqs";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Header } from "@/app/_components/header";
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
 import { RegionFilterDrawer } from "@/shared/components/region-filter-drawer";
 import { GENRE_FILTER_OPTIONS } from "@/shared/constants/genre";
 import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
+import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import { searchPerformances } from "@/shared/lib/search-performance";
 import { MOCK_SEARCH_PERFORMANCES } from "@/shared/mocks/search";
 import { SearchBar } from "./search-bar";
@@ -53,17 +49,9 @@ export function SearchScreen() {
     parseAsString.withDefault(""),
   );
 
-  // 장르 필터 바텀 시트 열림 상태를 URL에 저장해 뒤로가기로 닫을 수 있게 한다.
-  const [filterOpen, setFilterOpen] = useQueryState(
-    "filter",
-    parseAsBoolean.withDefault(false).withOptions({ history: "push" }),
-  );
-
-  // 지역 필터 드로워 열림 상태도 URL에 저장해 뒤로가기로 닫을 수 있게 한다.
-  const [regionOpen, setRegionOpen] = useQueryState(
-    "region-filter",
-    parseAsBoolean.withDefault(false).withOptions({ history: "push" }),
-  );
+  // 장르 필터 바텀 시트·지역 필터 드로워 열림 상태(공통 훅으로 히스토리 미누적).
+  const [filterOpen, setFilterOpen] = useOverlayFlag("filter");
+  const [regionOpen, setRegionOpen] = useOverlayFlag("region-filter");
 
   // 적용된 필터 칩 라벨(장르·지역). "전체"·빈 지역은 필터가 없는 상태라 칩에 넣지 않는다.
   const chipLabels = [genre === "전체" ? null : genre, region || null].filter(

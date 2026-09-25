@@ -1,28 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { parseAsBoolean, useQueryState } from "nuqs";
+import { useQueryState } from "nuqs";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { LegalDrawer } from "@/shared/components/legal-drawer";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useAuth } from "@/shared/hooks/useAuth";
+import {
+  overlayUrlOptions,
+  useOverlayFlag,
+} from "@/shared/hooks/useOverlayFlag";
 import { SettingRow } from "./setting-row";
 
 /**
  * 설정 화면 본문. 로그인 여부(useAuth)에 따라 계정 섹션을 분기한다.
- * 운영 정책 드로워는 URL 히스토리에 쌓아 뒤로가기로 닫을 수 있게 하고,
- * 로그아웃 모달은 히스토리에 쌓지 않는다.
+ * 운영 정책 드로워와 로그아웃 모달 모두 열림 상태를 URL에 저장하되,
+ * 히스토리에는 쌓지 않는다.
  */
 export function SettingList() {
   const router = useRouter();
-  // 드로워 열림 상태(개인정보=privacy, 위치약관=location)를 URL에 저장한다.
-  const [policy, setPolicy] = useQueryState("policy", { history: "push" });
-  // 로그아웃 모달 열림 상태를 URL에 저장하되, 히스토리에는 쌓지 않는다(replace).
+  // 드로워 열림 상태(개인정보=privacy, 위치약관=location). 문자열이라 공통 옵션을 그대로 쓴다.
+  const [policy, setPolicy] = useQueryState("policy", overlayUrlOptions);
+  // 로그아웃 모달 열림 상태(공통 훅으로 히스토리 미누적).
   // 모달은 백드롭·Esc·취소로 닫으며 뒤로가기로 닫지 않는다.
-  const [logoutOpen, setLogoutOpen] = useQueryState(
-    "logout",
-    parseAsBoolean.withDefault(false).withOptions({ history: "replace" }),
-  );
+  const [logoutOpen, setLogoutOpen] = useOverlayFlag("logout");
 
   // 헤더와 동일하게 useAuth로 로그인 여부를 판별한다(세션 확인 중 깜빡임 방지).
   const { user, isLoggedIn, isLoading } = useAuth();

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { parseAsBoolean, useQueryState } from "nuqs";
 import { ShareLinearIcon } from "@solar-icons/react";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import { AnimatedToast, type ToastVariant } from "@/shared/components/toast";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { getCategoryCaption } from "@/app/(tabs)/_lib/performance-status";
@@ -52,10 +52,8 @@ export function DetailScreen({ id }: DetailScreenProps) {
   const { data: detail, isLoading } = usePerformanceDetail(id);
 
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [loginOpen, setLoginOpen] = useQueryState(
-    "login",
-    parseAsBoolean.withDefault(false).withOptions({ history: "push" }),
-  );
+  // 로그인 유도 모달 열림 상태(공통 훅으로 히스토리 미누적).
+  const [loginOpen, setLoginOpen] = useOverlayFlag("login");
   // 좋아요 로컬 오버라이드(null이면 서버/목업 값 사용). effect 동기화 없이 렌더에서 파생한다.
   const [likedOverride, setLikedOverride] = useState<boolean | null>(null);
 

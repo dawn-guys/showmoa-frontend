@@ -3,6 +3,7 @@
 import { useQueryState } from "nuqs";
 import { CodeSquareLineDuotoneIcon } from "@solar-icons/react";
 import { LegalDrawer } from "@/shared/components/legal-drawer";
+import { overlayUrlOptions } from "@/shared/hooks/useOverlayFlag";
 
 // 팀원 개인 GitHub 주소. Figma 노출 순서(곽다윗·양덕관·이준호·정준영)를 따른다.
 const TEAM = [
@@ -21,8 +22,8 @@ const PROJECT_REPO_URL = "https://github.com/orgs/dawn-guys/repositories";
  * 하단 나브에 가려지지 않도록 나브 높이만큼 하단 여백을 둔다.
  */
 export function SiteFooter() {
-  // 드로워 열림 상태를 URL에 저장해 뒤로가기로 닫을 수 있게 한다.
-  const [policy, setPolicy] = useQueryState("policy", { history: "push" });
+  // 드로워 열림 상태(개인정보=privacy, 위치약관=location). 문자열이라 공통 옵션을 그대로 쓴다.
+  const [policy, setPolicy] = useQueryState("policy", overlayUrlOptions);
 
   return (
     <>
