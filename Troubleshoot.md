@@ -414,3 +414,77 @@ rg 'history:\s*"push"' src
   단계 이동(퍼널)처럼 뒤로가기로 되짚어야 하면 `push`, 오버레이 개폐처럼 되짚을 필요가
   없는 일시 상태면 `replace`.
 - URL로 상태를 관리하는 것과, 그 전환을 히스토리에 남길지는 별개의 결정이다.
+
+---
+
+## 2026-09-25 · 홈 스크롤바가 중앙 정렬을 왼쪽으로 밀고, 스크롤바 모양도 투박함
+
+### 1. 증상
+
+- 홈처럼 콘텐츠가 길어 스크롤이 생기는 페이지에 진입하면, 데스크톱 브라우저가
+  **자리를 차지하는(classic) 스크롤바**를 그려 뷰포트 폭을 ~15px 깎는다.
+- `layout.tsx`의 앱 컬럼이 `mx-auto`로 중앙 정렬되는데, 스크롤바가 폭을 먹는 만큼
+  중앙이 왼쪽으로 밀린다. 스크롤이 안 생기는 짧은 페이지와 좌우가 어긋나 보임.
+
+### 2. 원인
+
+- 스크롤은 뷰포트(`html`)에서 일어나고, Windows Chrome 등은 오버레이가 아니라
+  레이아웃 폭을 차지하는 스크롤바를 쓴다. 스크롤 유무에 따라 뷰포트 콘텐츠 폭이
+  달라지니 `mx-auto` 중앙이 페이지마다 다른 위치가 된다.
+- 실제 모바일 기기는 오버레이 스크롤바(폭 0)라 이 현상이 없다 → **데스크톱 미리보기
+  한정** 문제.
+
+### 3. 해결
+
+`src/app/globals.css`의 `html` 규칙에 두 가지를 적용.
+
+1. **중앙 밀림 방지** — `scrollbar-gutter: stable both-edges`.
+   스크롤바 자리(거터)를 콘텐츠 박스 바깥에 **항상** 예약하고, 반대쪽에도 대칭
+   거터를 둔다. 스크롤 유무·페이지와 관계없이 앱 컬럼이 같은 위치에 중앙 정렬되고,
+   스크롤바가 콘텐츠 영역을 침범하지 않는다.
+
+2. **스크롤바 모양 정리** — `track`·`button` 없이 `thumb`만 노출.
+
+   ```css
+   html {
+     scrollbar-gutter: stable both-edges;
+     /* Firefox */
+     scrollbar-width: thin;
+     scrollbar-color: var(--input) transparent;
+   }
+   /* webkit(Chrome/Safari) */
+   ::-webkit-scrollbar { width: 8px; height: 8px; }
+   ::-webkit-scrollbar-track,
+   ::-webkit-scrollbar-button,
+   ::-webkit-scrollbar-corner { background: transparent; }
+   ::-webkit-scrollbar-thumb {
+     background: var(--input);        /* #ffffff26, 하드코딩 대신 토큰 */
+     background-clip: padding-box;    /* 투명 테두리 + padding-box로 트랙 안에 */
+     border: 2px solid transparent;   /* 떠 있는 얇은 알약처럼 보이게 */
+     border-radius: 9999px;
+   }
+   ```
+
+   `track`/`button`은 접근성 요소가 아니라(키보드 방향키·휠 스크롤과 무관) 없애도
+   접근성 저하 없음.
+
+### 4. 트레이드오프 / 미채택
+
+- **자동 숨김(스크롤 중에만 표시)은 하지 않음.** 데스크톱 네이티브로는 제어 불가라
+  커스텀 오버레이 스크롤바(JS)가 필요한데, 그 이득은 데스크톱 미리보기에서만 있고
+  모바일은 이미 네이티브가 오버레이+자동숨김이라 비용 대비 실익이 낮아 보류.
+- `scrollbar-gutter`로 데스크톱엔 양쪽에 얇은 대칭 여백이 생기지만 대칭이라
+  어긋나 보이지 않고, 넓은 화면은 어차피 양옆이 검은 거터라 무해.
+
+### 5. 검증
+
+- `eslint` 통과 (CSS만 변경, typecheck 대상 없음).
+- 데스크톱에서 홈·짧은 페이지 간 중앙 정렬 어긋남 없음, thumb만 노출되는지 확인 필요.
+
+### 6. 교훈
+
+- **"스크롤바 때문에 중앙이 밀린다"는 `scrollbar-gutter: stable both-edges` 한 줄로 해결.**
+  거터를 항상·대칭으로 예약해 스크롤 유무와 무관하게 레이아웃을 고정한다.
+- 스크롤바 폭을 줄이면 `scrollbar-gutter`가 예약하는 거터도 같이 얇아진다(연동).
+- webkit(`::-webkit-scrollbar-*`)과 Firefox(`scrollbar-width`/`scrollbar-color`)는
+  문법이 달라 크로스브라우저로 맞추려면 둘 다 써야 한다.
