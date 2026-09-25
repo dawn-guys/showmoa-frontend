@@ -11,8 +11,10 @@ interface HorizontalPerformanceListProps {
 
 // 가로 스크롤 컨테이너. 카드가 화면 폭을 넘으면 스와이프로 넘긴다.
 // 왼쪽 패딩(px-4)으로 iOS 뒤로가기 스와이프와 충돌하지 않게 한다.
+// scroll-pl-4: snap-mandatory가 로드 시 첫 카드를 스냅 정렬하며 왼쪽 패딩을
+// 밀어내는 문제를 막는다(스냅포트 시작선을 패딩 안쪽으로 당겨 정렬).
 const scrollerClassName =
-  "flex gap-[15px] overflow-x-auto px-4 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  "flex gap-[15px] overflow-x-auto px-4 pb-1 snap-x snap-mandatory scroll-pl-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 /** 카드 폭(144px). Figma 좋아요/오늘 카드 기준. */
 const cardItemClassName = "w-36 shrink-0 snap-start";
