@@ -488,3 +488,223 @@ rg 'history:\s*"push"' src
 - 스크롤바 폭을 줄이면 `scrollbar-gutter`가 예약하는 거터도 같이 얇아진다(연동).
 - webkit(`::-webkit-scrollbar-*`)과 Firefox(`scrollbar-width`/`scrollbar-color`)는
   문법이 달라 크로스브라우저로 맞추려면 둘 다 써야 한다.
+
+---
+
+## 2026-09-27 · Phase 2 Todo A — 토큰을 어디에 두고 어떻게 붙일 것인가
+
+### 1. 과제 / 증상
+
+- Phase 1의 인증은 `src/shared/mocks/auth.ts`의 `MOCK_AUTH_STATE` 상수 하나를
+  `"guest"` / `"user"`로 바꿔 화면을 분기하는 스위치였다. 이걸 실 API
+  (`GET /api/users/me`)로 바꿔야 한다.
+- 동시에 phase.md Todo A는 `proxy.ts`로 `/notification`, `/password/update`를
+  가드하라고 요구한다.
+- 이 두 요구가 **토큰 저장 위치를 결정한다.** 먼저 결정하지 않으면 뒤의 Todo B~I가
+  전부 잘못된 토대 위에 올라간다.
+
+### 2. 진단 — 계약서 대신 실서버를 찔러봄
+
+`v3/api-docs`만 읽고 시작하면 틀린 전제를 갖게 된다. `curl`로 직접 확인한 결과:
+
+```bash
+# 401 — Spring Security 진입점
+curl -i localhost:8080/api/users/me
+#   Content-Type: application/json
+#   {"message":"인증이 필요합니다."}
+
+# 400 — ControllerAdvice
+curl -i -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"","password":""}'
+#   Content-Type: text/plain;charset=UTF-8
+#   이메일은 필수입니다.
+
+# 로그인 실패
+curl -i -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"nobody@example.com","password":"wrongpass1"}'
+#   HTTP/1.1 500   ← 401이 아니다
+
+# CORS preflight
+curl -i -X OPTIONS localhost:8080/api/users/me -H 'Origin: http://localhost:3000' \
+  -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization'
+#   Access-Control-Allow-Origin: http://localhost:3000
+#   Access-Control-Allow-Headers: authorization
+#   Access-Control-Allow-Credentials: true
+```
+
+여기서 나온 사실 세 가지:
+
+1. **에러 포맷이 두 가지로 섞여 있다.** `application/json`의 `{message}`와
+   `text/plain` 원문. 정규화 코드가 둘 다 처리해야 한다.
+2. **로그인 실패가 401이 아니라 500이다** (백엔드 버그).
+3. **CORS는 문제가 아니다.** phase.md의 초안 근거였던 "CORS가 회피된다"는 현재
+   백엔드에 해당하지 않는다. `authorization` 헤더도 통과한다.
+
+### 3. 원인 — 왜 localStorage가 불가능한가
+
+`localStorage`에 토큰을 두는 흔한 방식은 이 프로젝트에서 **Todo A를 완성할 수 없다.**
+
+- `proxy.ts`는 **서버에서 실행된다.** `localStorage`를 읽을 수 없다.
+  → `/notification` 가드를 구현할 방법이 아예 없다.
+- 부수적으로 `localStorage`의 토큰은 XSS로 읽힌다. 리프레시 토큰은 특히 치명적.
+
+즉 CORS가 아니라 **"서버가 읽을 수 있어야 한다"**가 쿠키를 선택하는 진짜 이유다.
+가드 요구사항이 저장 위치를 강제한 것이다.
+
+그리고 쿠키를 httpOnly로 두면 새 문제가 생긴다:
+
+- 토큰은 httpOnly 쿠키에 있어 **브라우저 JS가 읽을 수 없다** (그게 목적)
+- 백엔드는 `Authorization: Bearer` **헤더**를 요구한다 (쿠키를 안 읽는다)
+- → 쿠키에서 꺼내 헤더로 옮겨 담는 주체가 필요하고, 그건 서버 코드만 할 수 있다
+
+### 4. 해결
+
+**(a) 캐치올 프록시 — `src/app/api/backend/[...path]/route.ts`**
+
+`/api/backend/<백엔드 경로>`로 들어온 요청을 백엔드로 전달하며 세 가지를 한다.
+
+1. 쿠키의 `sm_at`을 `Authorization: Bearer`로 옮겨 붙인다
+2. 401이면 `sm_rt`로 갱신하고 원 요청을 **1회만** 재시도
+3. 갱신도 실패하면 쿠키를 지우고 401 반환
+
+캐치올(`[...path]`)로 만든 이유: 엔드포인트마다 라우트 파일을 만들면 파일 9개 이상에
+**"토큰 붙이고 401이면 갱신" 코드가 복붙**된다. 캐치올이면 Todo B~I에서 엔드포인트가
+늘어도 **추가 파일 0개**이고 갱신 로직이 한 곳에만 존재한다.
+
+**(b) 쿠키 설계**
+
+| 쿠키 | 값 | maxAge |
+| --- | --- | --- |
+| `sm_at` | accessToken | 없음(세션 쿠키) |
+| `sm_rt` | refreshToken | env `AUTH_REFRESH_MAX_AGE_SECONDS`, 기본 14일 |
+
+- `sm_at`에 `maxAge`를 두지 않은 이유: 만료 판정의 유일한 근거는 백엔드의 401이다.
+  쿠키에 수명을 적어 두면 두 개의 진실이 생기고 서로 어긋난다.
+- **로그인 판정은 `sm_rt`로 한다.** `sm_at`으로 판정하면 access가 만료됐을 뿐
+  갱신으로 살아날 세션까지 로그아웃 처리한다.
+
+**(c) 토큰이 오가는 경로는 프록시에서 차단**
+
+`BLOCKED_PATHS`에 `api/auth/login`, `api/auth/refresh`, `api/auth/oauth/exchange`,
+`api/auth/logout`. 이유는 두 가지로 다르다.
+
+- 앞의 셋: 응답 본문에 토큰(`TokenResponse`)이 담긴다. 프록시가 응답을 그대로
+  넘기므로, 안 막으면 누가 `fetch("/api/backend/api/auth/login")`을 호출해
+  **토큰을 JSON으로 읽을 수 있다.** httpOnly로 숨긴 의미가 사라진다.
+- `logout`: 통과시키면 백엔드 세션만 끊기고 **쿠키는 남는다.** 로그인처럼 보이지만
+  모든 요청이 401이 되는 상태. (이건 처음 구현에서 빠뜨렸다 — 5번 참조)
+
+추가로 `path[0] !== "api"`를 걸어 `swagger-ui` 등 `/api/*` 밖의 백엔드 경로는
+프록시하지 않는다.
+
+**(d) 동시 refresh 합치기 — `backend.server.ts`**
+
+홈처럼 쿼리가 여러 개 동시에 뜨면 각각 401을 받아 refresh가 동시에 여러 번 나간다.
+백엔드가 리프레시 토큰을 회전시키면 **서로를 무효화해 로그아웃된다.** 모듈 레벨
+`Map<refreshToken, Promise>`로 같은 토큰의 요청을 진행 중인 하나로 합쳤다.
+
+**(e) 500에는 갱신하지 않는다**
+
+2번에서 로그인 실패가 500으로 온다는 걸 알았으므로, 재시도 조건을
+`response.status !== 401` 로 명시해 **백엔드가 401을 준 경우에만** 갱신한다.
+나중에 백엔드가 로그인 실패를 401로 고쳐도 엉뚱하게 갱신이 돌지 않도록 하는
+방어이기도 하다.
+
+### 5. 구현 중 걸린 문제들
+
+**(1) `authorizationHeader`의 유니온 타입 — TS2322**
+
+```ts
+// 삼항의 두 갈래가 서로 다른 타입이 되어 HeadersInit에 대입 불가
+function authorizationHeader(accessToken: string | undefined) {
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+}
+//   Type '{ Authorization?: undefined; }' is not assignable to type 'Record<string, string>'
+//   → Authorization 프로퍼티가 index signature와 호환되지 않음
+//     ('undefined'는 'string'에 대입할 수 없음)
+```
+
+반환 타입을 `Record<string, string>`으로 명시하면 두 갈래가 같은 타입으로 좁혀진다.
+
+**(2) `api/auth/logout`을 차단 목록에서 빠뜨림**
+
+처음엔 "응답 본문에 토큰이 담기는 경로"만 막았다. `logout`은 응답에 토큰이 없으니
+기준에서 벗어났는데, 통과시키면 4-(c)의 쿠키/세션 불일치가 생긴다. 차단 기준을
+"응답에 토큰이 있는 경로"에서 **"세션 쿠키를 다루는 경로"**로 바꿔 잡았다.
+
+```bash
+# 수정 전: 401 (백엔드까지 그대로 전달됨)
+# 수정 후: 404
+curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  localhost:3000/api/backend/api/auth/logout
+```
+
+**(3) `.gitignore`의 `.env*`가 예제 파일까지 무시**
+
+phase.md는 "새 환경 변수를 예제 파일에 추가"를 요구하는데, `.gitignore`의 `.env*`가
+`.env.local.example`까지 잡아서 **커밋이 불가능한 상태**였다. 즉 예제 파일이 존재해도
+아무 역할을 못 한다.
+
+```bash
+git check-ignore -v .env.local.example
+#   .gitignore:34:.env*   .env.local.example
+```
+
+`!.env.local.example` 부정 패턴을 추가해 해결.
+
+**(4) `phase.md` 멀티라인 치환 실패 — CRLF**
+
+`phase.md`는 디스크에서 CRLF인데(`.gitattributes`는 `eol=lf`라 저장소에서만 LF)
+스크립트가 `\n`으로 패턴을 만들어 여러 줄 매칭이 전부 실패했다. 한 줄 치환은
+성공하고 여러 줄만 실패해서 원인이 늦게 보였다. LF로 정규화 → 치환 → 원래
+줄바꿈으로 복원하는 순서로 처리.
+
+### 6. 검증
+
+`curl`로 분기별 확인 (dev 서버 + 실제 백엔드):
+
+| 시나리오 | 기대 | 결과 |
+| --- | --- | --- |
+| 게스트 `GET /api/backend/api/users/me` | 401 | 401 |
+| 가짜 `sm_at` + 가짜 `sm_rt` | 갱신 시도 → 실패 → 쿠키 삭제 + 401 | `Max-Age=0` 2개 + 401 |
+| 가짜 `sm_at`만 (`sm_rt` 없음) | 갱신 시도 안 함, Set-Cookie 없음 | 일치 |
+| `/api/backend/api/auth/{login,refresh,oauth/exchange,logout}` | 404 | 404 |
+| `/api/backend/swagger-ui/index.html` | 404 | 404 |
+| 게스트 `/notification`, `/password/update` | `/login` 리다이렉트 | 307 |
+| `sm_rt` 있을 때 `/notification` | 통과 | 200 |
+| `/wishlist`, `/password/find` (가드 대상 아님) | 200 | 200 |
+| 로그인 실패 통과 | 500 통과 + **Set-Cookie 없음** | 일치 |
+| 로그아웃 (토큰 없어도) | 204 + 쿠키 삭제 | 일치 |
+| `search?page=0&size=3` | Page 객체, 1703건 | 일치 |
+
+- `typecheck`, `lint` 통과. 전체 페이지 200 (`/notification`만 307).
+- 페이징은 `page`/`size` **개별 파라미터**로 동작함을 확인 (계약의 `pageable` 객체
+  표기보다 phase.md 쪽이 맞다).
+
+### 7. 미검증 / 미해결
+
+- **로그인 성공 경로 전체가 미검증.** `POST /api/users/signup`이 이메일 인증을
+  선행 요구하고(`이메일 인증이 필요합니다.`), 인증 메일을 받을 수 없어 테스트 계정을
+  만들 수 없다. `/actuator`, `/h2-console`도 전부 401로 막혀 있어 우회 경로가 없다.
+  → refresh 성공 분기, `users/me`의 로그인 상태 응답이 확인되지 않았다.
+- **리프레시 토큰 회전 여부 불명.** 회전한다면 4-(d)의 합치기가 필수이고,
+  안 한다면 있어도 무해하다. 실제 토큰으로 확인 필요.
+- **리프레시 토큰 실제 수명이 계약에 없다.** `sm_rt`의 `maxAge`를 env로 빼고 14일을
+  기본값으로 두었다.
+- **로그인 실패 500은 백엔드 수정 필요** (401이 맞다).
+- `GET /api/performances/search?genres=연극`이 **500**이다. 프록시 경유가 아니라
+  백엔드 직접 호출도 같으므로 백엔드 문제. 실제 `genre` 값은 `"클래식·국악"`처럼
+  나오므로 Todo E의 카테고리 매핑에서 다시 봐야 한다.
+
+### 8. 교훈
+
+- **계약서(`v3/api-docs`)는 에러 응답을 알려주지 않는다.** 에러 포맷, 실패 시
+  상태 코드, CORS 허용 범위는 실서버를 찔러봐야 나온다. 이번엔 그 덕에 "로그인
+  실패 500"과 "에러 포맷 2종"을 설계 전에 잡았다.
+- **저장 위치는 취향이 아니라 요구사항이 결정한다.** "`proxy.ts`로 가드한다"는
+  한 줄이 "서버가 읽을 수 있어야 한다"를 강제하고, 그게 곧 쿠키를 지목한다.
+- **httpOnly를 도입하면 "토큰을 헤더로 옮겨 담는 서버 지점"이 반드시 하나 생긴다.**
+  그 지점을 캐치올 하나로 모으면 갱신 로직도 자연히 한 곳에 모인다.
+- **프록시를 만들면 "프록시를 타서는 안 되는 경로"를 같이 정의해야 한다.** 그러지
+  않으면 프록시가 우회로가 된다. 기준은 "응답에 토큰이 있는지"가 아니라
+  "세션 상태를 바꾸는지"다.

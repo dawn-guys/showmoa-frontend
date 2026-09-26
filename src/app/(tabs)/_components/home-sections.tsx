@@ -8,7 +8,7 @@ import { LikedSection } from "./liked-section";
 import { TodaySection } from "./today-section";
 
 /**
- * 홈 섹션 구성. 로그인 여부(useAuth → src/shared/mocks/auth.ts 스위치)에 따라
+ * 홈 섹션 구성. 로그인 여부(useAuth)에 따라
  * 좋아요·오늘의 공연 섹션을 추가로 노출한다.
  */
 export function HomeSections() {
