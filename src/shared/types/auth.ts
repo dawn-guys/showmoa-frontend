@@ -1,4 +1,5 @@
-// Contract: UserResponse, TokenResponse, LoginRequest, RefreshTokenRequest (v3/api-docs)
+// Contract: UserResponse, TokenResponse, LoginRequest, RefreshTokenRequest,
+// EmailSendRequest, EmailSendResponse, EmailVerifyRequest, SignupRequest (v3/api-docs)
 
 /** GET /api/users/me, POST /api/users/signup, PATCH /api/users/me/password 응답 */
 export interface UserResponse {
@@ -22,4 +23,26 @@ export interface LoginRequest {
 /** POST /api/auth/refresh 요청 바디 */
 export interface RefreshTokenRequest {
   refreshToken: string;
+}
+
+/** POST /api/email/send 요청 바디 */
+export interface EmailSendRequest {
+  email: string;
+}
+
+/** POST /api/email/send 응답. 인증 번호의 유효 시간(초)으로 타이머를 구동한다. */
+export interface EmailSendResponse {
+  expirationSeconds: number;
+}
+
+/** POST /api/email/verify 요청 바디 */
+export interface EmailVerifyRequest {
+  email: string;
+  code: string;
+}
+
+/** POST /api/users/signup 요청 바디 */
+export interface SignupRequest {
+  email: string;
+  password: string;
 }

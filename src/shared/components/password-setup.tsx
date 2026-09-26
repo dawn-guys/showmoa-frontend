@@ -12,9 +12,9 @@ import { cn } from "cn";
 // - reset : "새로운 비밀번호를 설정/확인해 주세요"(비밀번호 찾기·변경-공통)
 const SET_MAIN = "비밀번호를 설정해 주세요";
 const SET_MAIN_RESET = "새로운 비밀번호를 설정해 주세요";
-const SET_SUB = "소문자 영문, 숫자를 포함한 8~16자를 작성해 주세요";
-const SET_PLACEHOLDER = "영문, 숫자를 포함한 8~16자를 작성 하세요";
-const SET_ERROR = "소문자 영문, 숫자를 조합한 8~16자로 작성해 주세요";
+const SET_SUB = "안전한 비밀번호를 설정해 주세요";
+const SET_PLACEHOLDER = "영문, 숫자를 포함한 8자 이상을 작성 하세요";
+const SET_ERROR = "영문, 숫자를 조합한 8자 이상으로 작성해 주세요";
 
 const CONFIRM_MAIN = "비밀번호를 확인해 주세요";
 const CONFIRM_MAIN_RESET = "새로운 비밀번호를 확인해 주세요";
@@ -26,13 +26,20 @@ const CONFIRM_ERROR = "비밀 번호와 일치하지 않습니다. 비밀번호�
 // CTA 문구는 spec에 없어 Figma(node 488:5371, 488:5423) 값을 따른다.
 const NEXT_CTA = "다음";
 
-// 비밀번호 검증: 소문자 영문과 숫자를 모두 포함한 8~16자.
+// 비밀번호 검증: 계약(SignupRequest·PasswordResetRequest·ChangePasswordRequest)의
+// pattern ^(?=.*[A-Za-z])(?=.*\d).+$ 와 minLength 8을 그대로 옮겼다. 대소문자를
+// 가리지 않고, 최대 길이 제한은 없다.
 const isValidPassword = (value: string) =>
-  /^(?=.*[a-z])(?=.*\d)[a-z\d]{8,16}$/.test(value);
+  /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(value);
 
 interface PasswordSetupProps {
   /** 비밀번호 설정·확인을 모두 통과하면 호출된다(다음 단계로 이동). */
   onComplete: (password: string) => void;
+  /**
+   * onComplete가 API 요청을 보내는 동안 확인 단계 CTA에 로딩을 표시한다
+   * (docs/spec/common-ui.md · CTA 버튼 3).
+   */
+  isSubmitting?: boolean;
   /**
    * 문구 변형. "signup"은 회원가입(기본), "reset"은 비밀번호 찾기·변경의
    * "새로운 비밀번호" 문구를 사용한다(docs/spec/auth.md).
@@ -48,6 +55,7 @@ interface PasswordSetupProps {
  */
 export function PasswordSetup({
   onComplete,
+  isSubmitting = false,
   variant = "signup",
 }: PasswordSetupProps) {
   // 메인 문구만 variant에 따라 달라진다(서브·placeholder·에러는 동일).
@@ -125,7 +133,6 @@ export function PasswordSetup({
               hideLabel
               autoComplete="new-password"
               enterKeyHint="next"
-              maxLength={16}
               placeholder={SET_PLACEHOLDER}
               value={password}
               onChange={handlePasswordChange}
@@ -175,7 +182,6 @@ export function PasswordSetup({
                 hideLabel
                 autoComplete="new-password"
                 enterKeyHint="done"
-                maxLength={16}
                 placeholder={CONFIRM_PLACEHOLDER}
                 value={confirm}
                 onChange={handleConfirmChange}
@@ -186,6 +192,7 @@ export function PasswordSetup({
             <CtaButton
               type="submit"
               disabled={!confirmValid}
+              isLoading={isSubmitting}
               className={cn(
                 "mt-auto text-foreground",
                 confirmValid ? "hover:cursor-pointer" : "cursor-not-allowed",
