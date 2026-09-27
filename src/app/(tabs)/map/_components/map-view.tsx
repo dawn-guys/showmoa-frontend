@@ -11,13 +11,17 @@ import {
   useState,
 } from "react";
 import { LocateFixed } from "lucide-react";
-import type { MapVenue } from "@/app/(tabs)/map/_types";
+import type {
+  TheatreBoundsParams,
+  TheatreMapResponse,
+} from "@/app/(tabs)/map/_types";
 import {
   buildMapOptions,
   buildMapScriptUrl,
   buildUserMarkerContent,
   buildVenueMarkerContent,
   DEFAULT_CENTER,
+  toBoundsParams,
   venueMarkerAnchor,
 } from "@/app/(tabs)/map/_lib/naver-map";
 
@@ -35,30 +39,46 @@ export type MapStatus = "loading" | "ready" | "error";
 export interface MapViewHandle {
   /** 현재 위치로 이동하고 사용자 위치 마커를 갱신한다. */
   locate: () => void;
-  /** 해당 공연장 위치로 지도를 부드럽게 이동한다. */
-  panToVenue: (venue: MapVenue) => void;
+  /** 해당 극장 위치로 지도를 부드럽게 이동한다. */
+  panToTheatre: (theatre: TheatreMapResponse) => void;
+  /** 해당 좌표로 지도를 부드럽게 이동한다. */
+  panTo: (lat: number, lng: number) => void;
+  /** 현재 지도 중심. 검색의 lat·lng(거리순 정렬 기준)로 보낸다. */
+  getCenter: () => { lat: number; lng: number } | null;
 }
 
 interface MapViewProps {
   /** 네이버 지도 클라이언트 ID(키). */
   clientId: string;
-  venues: MapVenue[];
-  selectedVenueId: string | null;
-  onSelectVenue: (id: string) => void;
+  theatres: TheatreMapResponse[];
+  selectedTheatreId: number | null;
+  onSelectTheatre: (id: number) => void;
   onStatusChange: (status: MapStatus) => void;
+  /**
+   * 조회할 지도 범위를 알린다. 지도 생성 직후(초기 중심·줌 기준) 한 번,
+   * 이후에는 지도 이동·줌이 멈춘 idle 시점마다 호출된다.
+   */
+  onBoundsChange: (bounds: TheatreBoundsParams) => void;
 }
 
 /**
- * 네이버 지도 캔버스. 스크립트를 로드해 지도를 만들고, 공연장 마커와
- * 사용자 위치 마커를 관리한다. 부모는 ref로 locate()/panToVenue()를 호출한다.
+ * 네이버 지도 캔버스. 스크립트를 로드해 지도를 만들고, 극장 마커와
+ * 사용자 위치 마커를 관리한다. 부모는 ref로 locate()/panToTheatre()를 호출한다.
  */
 export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
-  { clientId, venues, selectedVenueId, onSelectVenue, onStatusChange },
+  {
+    clientId,
+    theatres,
+    selectedTheatreId,
+    onSelectTheatre,
+    onStatusChange,
+    onBoundsChange,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  const markersRef = useRef<Map<number, naver.maps.Marker>>(new Map());
   const userMarkerRef = useRef<naver.maps.Marker | null>(null);
 
   // 재진입 시 SDK가 이미 로드돼 있으면 즉시 준비 완료로 본다(파생값은 렌더에서 계산).
@@ -69,13 +89,15 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const [mapCreated, setMapCreated] = useState(false);
 
   // 리스너·마커 초기 상태에서 최신 값을 참조하기 위한 ref들.
-  const onSelectRef = useRef(onSelectVenue);
+  const onSelectRef = useRef(onSelectTheatre);
   const onStatusRef = useRef(onStatusChange);
-  const selectedRef = useRef(selectedVenueId);
+  const onBoundsRef = useRef(onBoundsChange);
+  const selectedRef = useRef(selectedTheatreId);
   useEffect(() => {
-    onSelectRef.current = onSelectVenue;
+    onSelectRef.current = onSelectTheatre;
     onStatusRef.current = onStatusChange;
-    selectedRef.current = selectedVenueId;
+    onBoundsRef.current = onBoundsChange;
+    selectedRef.current = selectedTheatreId;
   });
 
   // 인증 실패 전역 콜백 등록.
@@ -95,16 +117,28 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       DEFAULT_CENTER.lat,
       DEFAULT_CENTER.lng,
     );
-    mapRef.current = new naver.maps.Map(
+    const map = new naver.maps.Map(
       containerRef.current,
       buildMapOptions(center),
     );
+    mapRef.current = map;
     setMapCreated(true);
     onStatusRef.current("ready");
+
+    // 첫 조회용 범위. 극장 목록 조회에 bounds가 필수라 idle을 기다리지 않고
+    // 생성 직후의 뷰포트(초기 중심·줌)를 바로 알린다. 위치 동의를 거부해도
+    // 기본 중심좌표 기준으로 첫 호출이 나간다.
+    onBoundsRef.current(toBoundsParams(map));
+
+    // 이후 재조회는 이동·줌이 멈춘 뒤에만 한다(드래그 중 연속 호출 방지).
+    const idleListener = naver.maps.Event.addListener(map, "idle", () => {
+      onBoundsRef.current(toBoundsParams(map));
+    });
 
     // 마커 Map은 useRef로 만든 동일 인스턴스가 유지되므로 정리 시점에 참조를 캡처해 둔다.
     const markers = markersRef.current;
     return () => {
+      naver.maps.Event.removeListener(idleListener);
       markers.forEach((marker) => marker.setMap(null));
       markers.clear();
       userMarkerRef.current?.setMap(null);
@@ -114,48 +148,48 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     };
   }, [scriptLoaded]);
 
-  // 공연장 마커 생성(지도·공연장 목록이 준비되면). 초기 선택 상태는 selectedRef로 반영한다.
+  // 극장 마커 생성(지도·극장 목록이 준비되면). 초기 선택 상태는 selectedRef로 반영한다.
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapCreated || !map || venues.length === 0) return;
+    if (!mapCreated || !map) return;
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current.clear();
 
-    venues.forEach((venue) => {
-      const isSelected = selectedRef.current === venue.id;
+    theatres.forEach((theatre) => {
+      const isSelected = selectedRef.current === theatre.id;
       const anchor = venueMarkerAnchor(isSelected);
       const marker = new naver.maps.Marker({
         map,
-        position: new naver.maps.LatLng(venue.lat, venue.lng),
+        position: new naver.maps.LatLng(theatre.latitude, theatre.longitude),
         icon: {
-          content: buildVenueMarkerContent(venue.name, isSelected),
+          content: buildVenueMarkerContent(theatre.name, isSelected),
           anchor: new naver.maps.Point(anchor.x, anchor.y),
         },
         zIndex: isSelected ? 100 : 1,
       });
       naver.maps.Event.addListener(marker, "click", () => {
-        onSelectRef.current(venue.id);
+        onSelectRef.current(theatre.id);
       });
-      markersRef.current.set(venue.id, marker);
+      markersRef.current.set(theatre.id, marker);
     });
-  }, [mapCreated, venues]);
+  }, [mapCreated, theatres]);
 
-  // 선택된 공연장 변경 시 마커 아이콘(크기·말풍선)과 z-index를 갱신한다.
+  // 선택된 극장 변경 시 마커 아이콘(크기·말풍선)과 z-index를 갱신한다.
   useEffect(() => {
     if (!mapCreated) return;
-    venues.forEach((venue) => {
-      const marker = markersRef.current.get(venue.id);
+    theatres.forEach((theatre) => {
+      const marker = markersRef.current.get(theatre.id);
       if (!marker) return;
-      const isSelected = selectedVenueId === venue.id;
+      const isSelected = selectedTheatreId === theatre.id;
       const anchor = venueMarkerAnchor(isSelected);
       marker.setIcon({
-        content: buildVenueMarkerContent(venue.name, isSelected),
+        content: buildVenueMarkerContent(theatre.name, isSelected),
         anchor: new naver.maps.Point(anchor.x, anchor.y),
       });
       marker.setZIndex(isSelected ? 100 : 1);
     });
-  }, [mapCreated, selectedVenueId, venues]);
+  }, [mapCreated, selectedTheatreId, theatres]);
 
   // 현재 위치를 얻어 사용자 마커를 갱신하고 지도를 이동한다. 실패(거부 등)해도
   // 기본 좌표로 지도는 정상 동작한다.
@@ -179,6 +213,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
             zIndex: 50,
           });
         }
+        // 이동이 끝나면 idle이 발생해 그 지역의 극장 목록을 다시 불러온다.
         map.panTo(latlng);
       },
       () => {},
@@ -186,8 +221,22 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   }, []);
 
   useImperativeHandle(ref, () => ({
-    panToVenue: (venue) => {
-      mapRef.current?.panTo(new naver.maps.LatLng(venue.lat, venue.lng));
+    panToTheatre: (theatre) => {
+      mapRef.current?.panTo(
+        new naver.maps.LatLng(theatre.latitude, theatre.longitude),
+      );
+    },
+    panTo: (lat, lng) => {
+      mapRef.current?.panTo(new naver.maps.LatLng(lat, lng));
+    },
+    getCenter: () => {
+      const map = mapRef.current;
+      if (!map) return null;
+      // getCenter()는 Point|LatLng 유니온이지만 LatLng로 만든 지도라 LatLng다.
+      // Point의 x·y로 읽으면 위경도가 뒤바뀌어(400 "잘못된 좌표입니다")
+      // lat()·lng() 접근자를 쓴다. getBounds()도 같은 이유로 캐스트한다.
+      const center = map.getCenter() as naver.maps.LatLng;
+      return { lat: center.lat(), lng: center.lng() };
     },
     locate: moveToCurrentLocation,
   }));

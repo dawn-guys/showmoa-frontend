@@ -2,12 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryState } from "nuqs";
-import { useAuth } from "@/shared/hooks/useAuth";
 import { Toast } from "@/shared/components/toast";
-import type { MapVenue } from "@/app/(tabs)/map/_types";
+import type {
+  TheatreBoundsParams,
+  TheatreMapResponse,
+} from "@/app/(tabs)/map/_types";
+import type { PerformanceResponse } from "@/app/(tabs)/_types";
 import { NAVER_MAP_CLIENT_ID } from "@/app/(tabs)/map/_lib/naver-map";
-import { useVenues } from "@/app/(tabs)/map/_hooks/useVenues";
+import { useTheatres } from "@/app/(tabs)/map/_hooks/useTheatres";
+import { useTheatrePerformances } from "@/app/(tabs)/map/_hooks/useTheatrePerformances";
+import { useTheatreSearch } from "@/app/(tabs)/map/_hooks/useTheatreSearch";
 import { useLocationConsent } from "@/app/(tabs)/map/_hooks/useLocationConsent";
+import { useAuth } from "@/shared/hooks/useAuth";
 import {
   MapView,
   type MapStatus,
@@ -18,50 +24,91 @@ import { MapSkeleton } from "@/app/(tabs)/map/_components/map-skeleton";
 import { VenueBottomSheet } from "@/app/(tabs)/map/_components/venue-bottom-sheet";
 import { LocationConsentModal } from "@/app/(tabs)/map/_components/location-consent-modal";
 
-// 검색어를 공백 제거 후 비교해 "유니온 센터" ↔ "유니온센터" 같은 표기 차이를 흡수한다.
-const normalize = (value: string) => value.replace(/\s+/g, "");
-
-// venues 미로드 시 넘길 안정적인 빈 배열(참조가 매 렌더 바뀌지 않도록 모듈 상수로 둔다).
-const EMPTY_VENUES: MapVenue[] = [];
+// 목록 미로드 시 넘길 안정적인 빈 배열(참조가 매 렌더 바뀌지 않도록 모듈 상수로 둔다).
+const EMPTY_THEATRES: TheatreMapResponse[] = [];
+const EMPTY_PERFORMANCES: PerformanceResponse[] = [];
 
 /**
  * 지도 화면 오케스트레이터. 지도·검색·바텀 시트·동의 모달을 연결한다.
- * 지도 인스턴스 제어(현재 위치/공연장 이동)는 MapView의 imperative handle로 위임한다.
+ * 지도 인스턴스 제어(현재 위치/극장 이동)는 MapView의 imperative handle로 위임한다.
+ *
+ * 극장 목록 조회에는 지도 범위(bounds)가 필수라서, MapView가 지도를 만든 직후
+ * 초기 중심·줌 기준 범위를 알려 주면 그때 첫 조회가 나간다. 이후에는 지도가
+ * idle이 될 때마다 범위가 갱신되며 재조회된다.
  */
 export function MapScreen() {
   const { isLoggedIn, isLoading: authLoading } = useAuth();
-  const { data: venues, isLoading: venuesLoading } = useVenues();
   const { shouldPrompt, dismiss } = useLocationConsent(
     !authLoading && !isLoggedIn,
   );
 
-  // 디테일 화살표 딥링크로 넘어온 공연장 id(?venueId=). 지도의 공연장 엔티티와 공유하는 키.
+  // 현재 조회 범위. 지도가 준비되기 전에는 null이라 조회하지 않는다.
+  const [bounds, setBounds] = useState<TheatreBoundsParams | null>(null);
+  const { data: theatres, isLoading: theatresLoading } = useTheatres(bounds);
+  const { searchTheatres, isSearching } = useTheatreSearch();
+
+  // 디테일 화살표 딥링크로 넘어온 극장 id(?venueId=). 극장 id는 숫자라 문자열로 비교한다.
   const [venueIdParam] = useQueryState("venueId");
 
   const mapViewRef = useRef<MapViewHandle>(null);
   const [mapStatus, setMapStatus] = useState<MapStatus>("loading");
-  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
-  const [searching, setSearching] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // 딥링크 공연장으로의 최초 이동을 한 번만 수행하기 위한 플래그.
-  const didFocusVenueRef = useRef(false);
 
-  const venueList = venues ?? EMPTY_VENUES;
+  /**
+   * 포커스된 극장. 사용자 액션(마커 클릭·검색)으로만 바뀐다.
+   *
+   * id가 아니라 응답 객체를 그대로 담는다. 그래서 지도를 옮겨 이 극장이 현재
+   * 뷰포트 조회 결과에서 빠져도 시트는 그대로 유지되고(시트가 사라지지 않음),
+   * 지도 이동만으로 다른 극장이 포커스되지도 않는다.
+   */
+  const [selectedTheatre, setSelectedTheatre] =
+    useState<TheatreMapResponse | null>(null);
 
-  // 선택값이 없으면 딥링크 공연장 → 첫 공연장 순으로 기본 선택을 파생한다(effect 없이 렌더에서 계산).
-  const effectiveSelectedId =
-    selectedVenueId ?? venueIdParam ?? venueList[0]?.id ?? null;
+  /**
+   * 진입 직후 1회만 정하는 기본 포커스(딥링크 극장 → 지도 중앙 최근접 극장).
+   * 시트는 진입 시점부터 자리를 차지하는 UI라 비워 둘 수 없어 기본값을 둔다.
+   * 첫 목록에서 한 번만 정하고, 이후 지도 이동으로는 갱신하지 않는다.
+   */
+  const [initialTheatre, setInitialTheatre] =
+    useState<TheatreMapResponse | null>(null);
 
-  // 지도가 준비되고 목록이 로드되면 딥링크 공연장 위치로 한 번 이동한다(선택 상태는 위에서 파생).
+  // 딥링크 극장으로의 최초 이동을 한 번만 수행하기 위한 플래그.
+  const didFocusTheatreRef = useRef(false);
+
+  const theatreList = theatres ?? EMPTY_THEATRES;
+
+  // 첫 목록이 도착한 렌더에서 기본 포커스를 확정한다. effect가 아니라 렌더 중
+  // 상태 조정이라 추가 커밋 없이 곧바로 반영된다.
+  if (initialTheatre === null && theatreList.length > 0) {
+    const fromDeepLink = venueIdParam
+      ? theatreList.find((theatre) => String(theatre.id) === venueIdParam)
+      : undefined;
+    setInitialTheatre(
+      fromDeepLink ??
+        theatreList.find((theatre) => theatre.nearest) ??
+        theatreList[0],
+    );
+  }
+
+  // 사용자가 고른 극장이 있으면 그것, 없으면 진입 시 기본 포커스.
+  const focusedTheatre = selectedTheatre ?? initialTheatre;
+  const focusedTheatreId = focusedTheatre?.id ?? null;
+
+  const { data: performances, isLoading: performancesLoading } =
+    useTheatrePerformances(focusedTheatreId);
+
+  // 지도가 준비되고 목록이 로드되면 딥링크 극장 위치로 한 번 이동한다(선택 상태는 위에서 파생).
   useEffect(() => {
-    if (didFocusVenueRef.current || mapStatus !== "ready" || !venueIdParam) {
+    if (didFocusTheatreRef.current || mapStatus !== "ready" || !venueIdParam) {
       return;
     }
-    const target = venueList.find((venue) => venue.id === venueIdParam);
+    const target = theatreList.find(
+      (theatre) => String(theatre.id) === venueIdParam,
+    );
     if (!target) return;
-    didFocusVenueRef.current = true;
-    mapViewRef.current?.panToVenue(target);
-  }, [mapStatus, venueIdParam, venueList]);
+    didFocusTheatreRef.current = true;
+    mapViewRef.current?.panToTheatre(target);
+  }, [mapStatus, venueIdParam, theatreList]);
 
   // 검색 실패 토스트는 잠시 후 자동으로 사라진다.
   useEffect(() => {
@@ -70,35 +117,60 @@ export function MapScreen() {
     return () => clearTimeout(timer);
   }, [errorMessage]);
 
-  const selectedVenue =
-    venueList.find((venue) => venue.id === effectiveSelectedId) ?? null;
-
-  const handleSelectVenue = (id: string) => {
-    setSelectedVenueId(id);
-    const venue = venueList.find((v) => v.id === id);
-    if (venue) mapViewRef.current?.panToVenue(venue);
+  // 마커 클릭: 사용자 액션이므로 포커스를 옮긴다.
+  const handleSelectTheatre = (id: number) => {
+    const theatre = theatreList.find((t) => t.id === id);
+    if (!theatre) return;
+    setSelectedTheatre(theatre);
+    mapViewRef.current?.panToTheatre(theatre);
   };
 
-  // MOCK: Phase 2에서 실제 극장 검색 API로 교체한다. 지금은 목업 공연장 이름을 매칭한다.
+  /**
+   * 극장·공연명·지역 통합 검색. 현재 지도 중심을 함께 보내 가까운 결과가 먼저
+   * 오게 한다. 결과 형태에 따라 지도를 옮기고, 이동 후 idle에서 그 지역의 극장
+   * 목록을 다시 불러온다.
+   *
+   * - LOCATION: 포커스할 극장이 없는 결과라 지도만 그 좌표로 옮기고 포커스는
+   *   건드리지 않는다(시트가 사라지지 않게).
+   * - THEATRES: 가장 가까운 첫 극장으로 이동하고 그 극장을 포커스한다.
+   * - 빈 목록이거나 요청이 실패하면 스펙 문구의 토스트를 띄운다.
+   */
   const handleSearch = async (query: string) => {
-    setSearching(true);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    const q = normalize(query);
-    const matched = venueList.find((venue) =>
-      normalize(venue.name).includes(q),
-    );
-    if (matched) {
-      setSelectedVenueId(matched.id);
-      mapViewRef.current?.panToVenue(matched);
-    } else {
-      setErrorMessage("공연을 찾을 수 없습니다");
+    const center = mapViewRef.current?.getCenter();
+    if (!center) return;
+
+    try {
+      const result = await searchTheatres({ keyword: query, ...center });
+
+      if (result.type === "LOCATION") {
+        mapViewRef.current?.panTo(result.lat, result.lng);
+        return;
+      }
+
+      const nearestMatch = result.theatres[0];
+      if (!nearestMatch) {
+        setErrorMessage("검색 결과를 찾을 수 없습니다");
+        return;
+      }
+
+      setSelectedTheatre(nearestMatch);
+      mapViewRef.current?.panToTheatre(nearestMatch);
+    } catch {
+      setErrorMessage("검색 결과를 찾을 수 없습니다");
     }
-    setSearching(false);
   };
 
+  // 동의: 현재 위치로 이동한다. 이동이 끝나면 idle에서 그 지역을 다시 조회한다.
   const handleAgree = () => {
     dismiss();
     mapViewRef.current?.locate();
+  };
+
+  // 취소: 지도는 기본 중심(혜화역)에 그대로 머문다. 지도 생성 시점에 이미 그
+  // 중심의 뷰포트로 극장 목록을 조회해 뒀으므로 추가 요청 없이 혜화역 기준
+  // 결과가 그대로 보인다(모달이 열려 있는 동안 지도는 움직일 수 없다).
+  const handleDecline = () => {
+    dismiss();
   };
 
   // 네이버 지도 키가 없으면 지도를 띄울 수 없어 플레이스홀더를 노출한다.
@@ -113,7 +185,9 @@ export function MapScreen() {
     );
   }
 
-  const isLoading = mapStatus === "loading" || venuesLoading;
+  // 지도 준비 전 또는 첫 극장 조회 중에만 스켈레톤을 덮는다. 지도를 움직여
+  // 재조회할 때는 이전 마커가 유지되므로 스켈레톤이 다시 뜨지 않는다.
+  const isLoading = mapStatus === "loading" || theatresLoading;
 
   return (
     <main className="relative h-dvh overflow-hidden bg-[#f6f6f6]">
@@ -121,10 +195,11 @@ export function MapScreen() {
       <MapView
         ref={mapViewRef}
         clientId={NAVER_MAP_CLIENT_ID}
-        venues={venueList}
-        selectedVenueId={effectiveSelectedId}
-        onSelectVenue={handleSelectVenue}
+        theatres={theatreList}
+        selectedTheatreId={focusedTheatreId}
+        onSelectTheatre={handleSelectTheatre}
         onStatusChange={setMapStatus}
+        onBoundsChange={setBounds}
       />
 
       {/* 로딩 중에는 스켈레톤을 지도 위에 얹는다. */}
@@ -141,7 +216,7 @@ export function MapScreen() {
 
       {/* 상단 검색창 */}
       <div className="absolute inset-x-0 top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top)+12px)]">
-        <MapSearchBar onSearch={handleSearch} searching={searching} />
+        <MapSearchBar onSearch={handleSearch} searching={isSearching} />
       </div>
 
       {/* 검색 실패 토스트 */}
@@ -151,16 +226,20 @@ export function MapScreen() {
         </div>
       )}
 
-      {/* 공연장 공연 정보 바텀 시트(로드 완료 후) */}
-      {!isLoading && selectedVenue && (
-        <VenueBottomSheet venue={selectedVenue} />
+      {/* 극장 공연 정보 바텀 시트(로드 완료 후) */}
+      {!isLoading && focusedTheatre && (
+        <VenueBottomSheet
+          theatre={focusedTheatre}
+          performances={performances ?? EMPTY_PERFORMANCES}
+          isLoading={performancesLoading}
+        />
       )}
 
       {/* 비로그인 최초 진입 시 위치 정보 동의 모달 */}
       <LocationConsentModal
         open={shouldPrompt}
         onAgree={handleAgree}
-        onDecline={dismiss}
+        onDecline={handleDecline}
       />
     </main>
   );

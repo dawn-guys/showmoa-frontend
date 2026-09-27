@@ -72,6 +72,63 @@ export interface AreaResponse {
   districts: string[];
 }
 
+// Contract: TheatreInfo, PerformanceResponse (v3/api-docs)
+
+/**
+ * 공연이 열리는 극장 정보. PerformanceResponse에 중첩돼 내려온다.
+ * 실제 응답 확인 결과 name·address·latitude·longitude는 항상 채워져 있고,
+ * telno·websiteUrl은 비어 있는 극장이 있어 nullable이다.
+ */
+export interface TheatreInfo {
+  name: string;
+  /** 지번이 아닌 도로명 주소 */
+  address: string;
+  latitude: number;
+  longitude: number;
+  /** 대표 전화번호. 등록되지 않은 극장이 있다. */
+  telno: string | null;
+  /** 공식 홈페이지. 등록되지 않은 극장이 있다. */
+  websiteUrl: string | null;
+}
+
+/**
+ * 공연 상세 정보. GET /api/performances/{id} 와
+ * GET /api/theatres/{id}/performances 가 같은 스키마를 쓴다.
+ * 날짜는 yyyy-MM-dd(시각·오프셋 없음)이고 상영 시간은 자유 문구다.
+ *
+ * 실제 응답 확인 결과 ageLimit만 null인 공연이 있었고, cast는 null 없이
+ * 빈 배열로 내려온다. endDate는 비어 있는 공연이 없어 optional로 두지 않는다.
+ */
+export interface PerformanceResponse {
+  id: number;
+  name: string;
+  posterUrl: string;
+  /** 통합 장르 값(연극·뮤지컬·콘서트·클래식·국악·기타) */
+  genre: string;
+  /** 공연 상태(공연예정·공연중·공연완료) */
+  state: string;
+  /** 공연 시작일 yyyy-MM-dd */
+  startDate: string;
+  /** 공연 종료일 yyyy-MM-dd */
+  endDate: string;
+  /** 상영 시간 자유 문구(예: "화요일(19:00)") */
+  showTimeGuidance: string;
+  /** 관람 연령(예: "만 7세 이상"). 표기가 없는 공연이 있다. */
+  ageLimit: string | null;
+  /** 출연진. 정보가 없으면 빈 배열이다. */
+  cast: string[];
+  ticketingSites: TicketingSiteInfo[];
+  theatre: TheatreInfo;
+  /** 비로그인은 항상 false */
+  isWished: boolean;
+}
+
+/** PerformanceResponse.ticketingSites 원소 */
+export interface TicketingSiteInfo {
+  name: string;
+  url: string;
+}
+
 // Provisional: based on screen spec, not the API contract.
 
 /** 공연 진행 상태. 날짜에서 파생되지만 목업 편의를 위해 명시한다. */

@@ -47,8 +47,9 @@ const MOCK_CAST = [
   "배현우",
 ];
 
-// MOCK: 지도 목업 공연장(venue-sejong)과 동일 엔티티로 맞춰 /map?venueId= 딥링크가
-// 해당 공연장을 선택·표시하도록 한다(id·이름·좌표를 MOCK_MAP_VENUES와 공유).
+// MOCK: 상세 화면(Todo F)은 아직 목업이라 공연장 id도 목업 값이다. 지도는 실제
+// 극장 id(숫자)를 쓰므로 /map?venueId=venue-sejong 딥링크는 매칭되지 않고,
+// 지도는 기본 극장을 선택한다. Todo F에서 실제 극장 id로 교체하면 다시 연결된다.
 const MOCK_VENUE_DETAIL: VenueDetail = {
   id: "venue-sejong",
   name: "세종문화회관",

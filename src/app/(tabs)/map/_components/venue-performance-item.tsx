@@ -4,20 +4,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { HeartButton } from "@/shared/components/heart-button";
-import type { PerformanceSummary } from "@/app/(tabs)/_types";
+import type { PerformanceResponse } from "@/app/(tabs)/_types";
 
 interface VenuePerformanceItemProps {
-  performance: PerformanceSummary;
+  performance: PerformanceResponse;
   /** 찜 상태 */
   isLiked: boolean;
   /** 찜 토글 콜백 */
   onToggleLike: () => void;
 }
 
-/** 공연 기간 표기(yyyy.MM.dd). 오픈런(종료일 없음)은 "오픈런"으로 표시한다. */
-function formatPeriod(startDate: string, endDate: string | null): string {
+/** 공연 기간 표기(yyyy.MM.dd). 날짜는 yyyy-MM-dd로 내려온다. */
+function formatPeriod(startDate: string, endDate: string): string {
   const start = format(parseISO(startDate), "yyyy.MM.dd");
-  if (!endDate) return `${start} - 오픈런`;
   return `${start} - ${format(parseISO(endDate), "yyyy.MM.dd")}`;
 }
 
@@ -30,7 +29,7 @@ export function VenuePerformanceItem({
   isLiked,
   onToggleLike,
 }: VenuePerformanceItemProps) {
-  const { id, title, posterUrl, startDate, endDate } = performance;
+  const { id, name, posterUrl, startDate, endDate } = performance;
 
   return (
     <li className="flex items-center gap-3">
@@ -51,7 +50,7 @@ export function VenuePerformanceItem({
         </span>
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate text-body1 font-semibold text-foreground">
-            {title}
+            {name}
           </span>
           <span className="truncate text-body3 text-muted-foreground">
             {formatPeriod(startDate, endDate)}
