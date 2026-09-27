@@ -22,9 +22,15 @@ export function isApiError(error: unknown): error is ApiError {
 /**
  * 실패 응답에서 메시지를 뽑는다.
  *
- * 백엔드 포맷이 두 가지로 섞여 있어 둘 다 처리한다.
- * - Spring Security 진입점(401/403): application/json → { "message": "..." }
- * - ControllerAdvice(400/500): text/plain → 본문이 곧 메시지
+ * 백엔드는 상태 코드와 무관하게 모든 실패를 RFC 7807 problem+json으로 돌려준다.
+ * Spring Security 진입점(401)도 ControllerAdvice(400·429·500)와 같은 형식이라
+ * 분기할 필요가 없다.
+ *
+ *   Content-Type: application/problem+json;charset=UTF-8
+ *   { "type": ..., "title": ..., "status": 401, "detail": "인증이 필요합니다.", "instance": ... }
+ *
+ * 문구는 detail에 들어 있다. 서브타입이 problem+json이고 charset까지 붙어서
+ * "application/json" 포함 여부로는 걸러지지 않으므로 "json"으로 본다.
  */
 export async function toApiError(response: Response): Promise<ApiError> {
   const fallback = response.statusText || `HTTP ${response.status}`;
@@ -38,16 +44,17 @@ export async function toApiError(response: Response): Promise<ApiError> {
 
   if (!body) return new ApiError(response.status, fallback);
 
-  if (response.headers.get("content-type")?.includes("application/json")) {
+  if (response.headers.get("content-type")?.includes("json")) {
     try {
       const parsed: unknown = JSON.parse(body);
-      if (
-        typeof parsed === "object" &&
-        parsed !== null &&
-        "message" in parsed &&
-        typeof parsed.message === "string"
-      ) {
-        return new ApiError(response.status, parsed.message);
+      if (typeof parsed === "object" && parsed !== null) {
+        if ("detail" in parsed && typeof parsed.detail === "string") {
+          return new ApiError(response.status, parsed.detail);
+        }
+        // problem+json이 아닌 응답이 섞여 들어올 때를 위한 대비.
+        if ("message" in parsed && typeof parsed.message === "string") {
+          return new ApiError(response.status, parsed.message);
+        }
       }
     } catch {
       // JSON 파싱 실패 시 본문 원문을 그대로 쓴다.
