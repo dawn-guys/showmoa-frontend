@@ -110,8 +110,8 @@ Contract conventions:
 
 ## Todo
 
-Order: A → B → C → D → E → F → G → H → I. Check off an item only when its
-Definition of Done holds.
+Order: A → B → C → D → E → F → G → H → I → J. Check off an item only when
+its Definition of Done holds.
 
 ### A. API client and auth infrastructure
 
@@ -165,23 +165,24 @@ Then tell me, and I verify and check the boxes:
 
 ### B. Login / Signup (/login, /signup)
 
-- [ ] POST /api/auth/login (TokenResponse). Failure: existing spec error
+- [x] POST /api/auth/login (TokenResponse). Failure: existing spec error
       toast and email input error border
-- [ ] POST /api/email/send (returns expirationSeconds → drives the timer)
-- [ ] POST /api/email/verify
-- [ ] POST /api/users/signup, then POST /api/auth/login for the
+- [x] POST /api/email/send (returns expirationSeconds → drives the timer)
+- [x] POST /api/email/verify
+- [x] POST /api/users/signup, then POST /api/auth/login for the
       "auto login" CTA on the completion screen
-- [ ] Google OAuth: POST /api/auth/oauth/exchange (one-time code → tokens)
-      BLOCKED: login start URL / redirect flow is not in the contract
-- [ ] In-app browser detection and hand-off for social login
+
+Social login (Google OAuth and the in-app browser hand-off) is split out to
+J and deferred to the end of the phase.
 
 ### C. Password find / update (/password/find, /password/update)
 
 - [ ] Find: email send + verify, then POST /api/users/password/reset
 - [ ] Update: PATCH /api/users/me/password
       BLOCKED: API needs currentPassword; the spec flow has no such input
-- [ ] Password rule: spec says lowercase+digits, 8~16 chars; API enforces
-      min 8, letters+digits, no max. Confirm before changing Zod schema.
+- [ ] Password rule: resolved in favour of the contract — letters (either
+      case) + digits, min 8, no max. PasswordSetup and the three copy
+      entries in docs/spec/auth.md were updated to match.
 
 ### D. Home (/)
 
@@ -235,6 +236,29 @@ Then tell me, and I verify and check the boxes:
       POST /api/auth/logout (clear tokens even if the request fails);
       hide 비밀번호 변경 if `hasPassword` is false (confirm with me)
 - [ ] Notification: BLOCKED (no endpoint), stays on mocks
+
+### J. Social login (/login)
+
+Split out of B and deferred to the end: the contract only covers the last
+step of the flow, so none of it can be built or tested yet. The login screen
+keeps the Google button with no onClick until this section starts.
+
+- [ ] Google OAuth: POST /api/auth/oauth/exchange (one-time code → tokens)
+      BLOCKED: login start URL / redirect flow is not in the contract
+- [ ] In-app browser detection and hand-off for social login
+      BLOCKED: nothing to hand off to until the start URL exists, and
+      docs/spec has no copy for the external-browser notice
+
+Ask the backend before starting J:
+
+- What is the login start URL (`/oauth2/authorization/google`, or does the
+  front end build it)?
+- After success, which front-end URL is the browser sent to, and what is the
+  query parameter holding the one-time code?
+- Does the front end own that callback route, or does the backend redirect
+  to an existing screen such as `/login?code=...`?
+- What comes back on failure or when the user cancels?
+- Is the one-time code's 60-second lifetime correct?
 
 ## Definition of Done
 

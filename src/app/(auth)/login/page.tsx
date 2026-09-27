@@ -12,11 +12,13 @@ import { TextField } from "@/shared/components/text-field";
 import { PasswordField } from "@/shared/components/password-field";
 import { CtaButton } from "@/shared/components/cta-button";
 import { AnimatedToast } from "@/shared/components/toast";
+import { useLogin } from "@/shared/hooks/useLogin";
 import { GoogleLoginButton } from "./_components/google-login-button";
 import { KakaoLoginButton } from "./_components/kakao-login-button";
 import { cn } from "cn";
 
-// Provisional: 로그인 입력값. API 계약 확정 전 화면 스펙 기준.
+// 로그인 입력값. 계약(LoginRequest)은 두 값 모두 1자 이상만 요구하지만,
+// 이메일 형식 검증은 화면 스펙(docs/spec/auth.md · 로그인)이 요구한다.
 const loginSchema = z.object({
   email: z.email(),
   password: z.string().min(1),
@@ -31,6 +33,7 @@ const TOAST_ID = "login-error-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useLogin();
   const {
     register,
     handleSubmit,
@@ -73,13 +76,19 @@ export default function LoginPage() {
     setFocus("email");
   };
 
-  const onSubmit = handleSubmit(async () => {
-    // MOCK: 실제 로그인 요청·세션 처리는 Phase 2. 백엔드가 없어 요청 실패 UI를 재현한다.
-    // 실패 시 이메일 인풋에 포커스가 들어가고 테두리는 error 색(destructive)이 된다.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setEmailInvalid(true);
-    setToast(LOGIN_ERROR_MESSAGE);
-    setFocus("email");
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await login(values);
+    } catch {
+      // 실패하면 이메일 인풋에 포커스가 들어가고 테두리는 error 색(destructive)이 되며
+      // 상단에 에러 토스트를 띄운다(docs/spec/auth.md · 로그인 5).
+      setEmailInvalid(true);
+      setToast(LOGIN_ERROR_MESSAGE);
+      setFocus("email");
+      return;
+    }
+    // 뒤로가기로 로그인 화면에 돌아오지 않도록 replace로 이동한다.
+    router.replace("/");
   });
 
   return (
@@ -169,8 +178,9 @@ export default function LoginPage() {
           </CtaButton>
         </form>
 
-        {/* 소셜 로그인 버튼(컴포넌트 분리). 실제 OAuth 연동은 Phase 2라
-            지금은 onClick을 붙이지 않는다. */}
+        {/* 소셜 로그인 버튼(컴포넌트 분리). 계약에 로그인 시작 URL이 없어
+            (POST /api/auth/oauth/exchange는 콜백 이후 단계다) 연결을 보류한다.
+            phase.md Todo B의 BLOCKED 항목. */}
         <GoogleLoginButton className="mt-2.5" />
         <KakaoLoginButton className="mt-2.5" />
 

@@ -8,6 +8,7 @@ import { TextField } from "@/shared/components/text-field";
 import { CtaButton } from "@/shared/components/cta-button";
 import { AnimatedToast } from "@/shared/components/toast";
 import { VerificationTimer } from "@/shared/components/verification-timer";
+import { useEmailVerification } from "@/shared/hooks/useEmailVerification";
 import { cn } from "cn";
 
 // UI 문구(docs/spec/auth.md · 회원가입/비밀번호 찾기/비밀번호 변경-공통).
@@ -28,13 +29,21 @@ const VERIFY_CTA = "완료";
 
 const TOAST_ID = "email-verification-toast";
 
+// 백엔드는 같은 이메일로 60초 안에 다시 발송하면 429로 거절한다. 이 값은 계약에
+// 없어(응답에 담겨 오지 않는다) 상수로 둔다. 거절 상황의 문구가 docs/spec에
+// 없으므로 재발송 버튼을 그동안 비활성으로 두어 요청 자체를 막는다.
+const RESEND_COOLDOWN_SECONDS = 60;
+
 const emailSchema = z.email();
 // 인증 번호는 숫자 6자리.
 const isValidCode = (code: string) => /^\d{6}$/.test(code);
 
 interface EmailVerificationProps {
-  /** 인증 번호 검증에 성공하면 호출된다(다음 단계로 이동). */
-  onVerified: () => void;
+  /**
+   * 인증 번호 검증에 성공하면 인증된 이메일과 함께 호출된다(다음 단계로 이동).
+   * 뒤 단계의 요청(회원가입·비밀번호 재설정)이 이 이메일을 그대로 쓴다.
+   */
+  onVerified: (email: string) => void;
 }
 
 /**
@@ -43,12 +52,22 @@ interface EmailVerificationProps {
  * 진행한다. 블러 시 형식 검증(인풋 인라인 에러), 요청 실패 시 테두리 에러 +
  * 상단 토스트를 보여준다(docs/spec/common-ui.md · 인풋). 인증 번호 단계에는
  * 공통 UI 타이머가 붙고, 시간이 만료되면 404 페이지로 넘어간다.
+ *
+ * 요청은 useEmailVerification(POST /api/email/send, /api/email/verify)이 맡고,
+ * 타이머는 발송 응답의 expirationSeconds로 구동된다.
  */
 export function EmailVerification({ onVerified }: EmailVerificationProps) {
-  const [phase, setPhase] = React.useState<"request" | "verify">("request");
+  const { sendCode, isSending, verifyCode, isVerifying } =
+    useEmailVerification();
 
   const [email, setEmail] = React.useState("");
   const [code, setCode] = React.useState("");
+
+  // 발송 성공 시각(ms)과 응답의 유효 시간(초). 발송 전에는 null이고, 이 값이
+  // 곧 단계 구분이자 타이머의 기준이다. 재발송에 성공하면 둘 다 갱신돼 타이머가
+  // 처음부터 다시 흐른다.
+  const [sentAt, setSentAt] = React.useState<number | null>(null);
+  const [expirationSeconds, setExpirationSeconds] = React.useState(0);
 
   // 블러 형식 검증 실패 메시지(인풋 인라인 표시).
   const [emailError, setEmailError] = React.useState<string | null>(null);
@@ -58,8 +77,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
   const [codeInvalid, setCodeInvalid] = React.useState(false);
 
   const [toast, setToast] = React.useState<string | null>(null);
-  const [sending, setSending] = React.useState(false);
-  const [verifying, setVerifying] = React.useState(false);
   // 타이머 만료 → 렌더 경로에서 notFound()로 404 이동.
   const [expired, setExpired] = React.useState(false);
 
@@ -84,27 +101,40 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     if (email && !emailValid) setEmailError(EMAIL_FORMAT_ERROR);
   };
 
+  /** 인증 메일 발송. 성공하면 응답의 유효 시간으로 타이머를 새로 시작한다. */
+  const requestCode = async () => {
+    const { expirationSeconds: seconds } = await sendCode({ email });
+    setExpirationSeconds(seconds);
+    setSentAt(Date.now());
+    setCode("");
+    setCodeError(null);
+    setCodeInvalid(false);
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailValid) {
       setEmailError(EMAIL_FORMAT_ERROR);
       return;
     }
-    setSending(true);
-    // MOCK: 실제 인증 메일 발송 요청은 Phase 2. 백엔드가 없어 요청 결과를 흉내낸다.
-    // error@test.com이면 요청 실패(유효하지 않은 이메일)를 재현한다.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setSending(false);
-    if (email === "error@test.com") {
+    try {
+      await requestCode();
+    } catch {
+      // 발송 실패: 인풋 테두리 에러 + 상단 토스트(docs/spec/common-ui.md · 인풋).
       setEmailInvalid(true);
       setToast(EMAIL_REQUEST_ERROR);
-      return;
     }
-    // 인증 번호 입력 단계로 전환한다.
-    setCode("");
-    setCodeError(null);
-    setCodeInvalid(false);
-    setPhase("verify");
+  };
+
+  const handleResend = async () => {
+    // 응답을 기다리는 동안 중복 발송을 막는다.
+    if (isSending) return;
+    try {
+      await requestCode();
+    } catch {
+      // 재발송 단계의 이메일 인풋은 수정 불가라 테두리 에러 없이 토스트만 띄운다.
+      setToast(EMAIL_REQUEST_ERROR);
+    }
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,26 +154,19 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
       setCodeError(CODE_FORMAT_ERROR);
       return;
     }
-    setVerifying(true);
-    // MOCK: 실제 인증 번호 검증은 Phase 2. 123456만 성공으로 처리한다.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setVerifying(false);
-    if (code !== "123456") {
+    try {
+      await verifyCode({ email, code });
+    } catch {
       setCodeInvalid(true);
       setToast(CODE_REQUEST_ERROR);
       return;
     }
-    onVerified();
-  };
-
-  const handleResend = () => {
-    // MOCK: 실제 인증 메일 재발송 요청은 Phase 2.
-    setCode("");
-    setCodeError(null);
-    setCodeInvalid(false);
+    onVerified(email);
   };
 
   // 타이머 만료 시 404로 이동한다. 렌더 경로에서 throw되어 not-found 경계가 받는다.
+  // 진행하던 단계가 사라지는 건 의도된 설계다(만료된 인증으로는 어차피 다음
+  // 단계로 갈 수 없다). 버그로 오해해 되돌리지 말 것.
   if (expired) notFound();
 
   return (
@@ -156,7 +179,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
         id={TOAST_ID}
       />
 
-      {phase === "request" ? (
+      {sentAt === null ? (
         <>
           <h2 className="text-h1 text-foreground">{EMAIL_MAIN}</h2>
           <p className="mt-2.5 text-sm font-medium break-keep text-muted-foreground">
@@ -185,7 +208,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
             <CtaButton
               type="submit"
               disabled={!emailValid}
-              isLoading={sending}
+              isLoading={isSending}
               className={cn(
                 "mt-auto text-foreground",
                 emailValid ? "hover:cursor-pointer" : "cursor-not-allowed",
@@ -241,6 +264,9 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
             {/* 타이머는 하단 CTA 바로 위에 가로 중앙으로 둔다(Figma node 488:5286). */}
             <div className="mt-auto flex justify-center">
               <VerificationTimer
+                startedAt={sentAt}
+                durationSeconds={expirationSeconds}
+                resendCooldownSeconds={RESEND_COOLDOWN_SECONDS}
                 onExpire={() => setExpired(true)}
                 onResend={handleResend}
               />
@@ -248,7 +274,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
             <CtaButton
               type="submit"
               disabled={!codeValid}
-              isLoading={verifying}
+              isLoading={isVerifying}
               className={cn(
                 "mt-[50px] text-foreground",
                 codeValid ? "hover:cursor-pointer" : "cursor-not-allowed",
