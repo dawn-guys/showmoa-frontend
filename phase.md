@@ -165,11 +165,11 @@ Then tell me, and I verify and check the boxes:
 
 ### B. Login / Signup (/login, /signup)
 
-- [ ] POST /api/auth/login (TokenResponse). Failure: existing spec error
+- [x] POST /api/auth/login (TokenResponse). Failure: existing spec error
       toast and email input error border
-- [ ] POST /api/email/send (returns expirationSeconds → drives the timer)
-- [ ] POST /api/email/verify
-- [ ] POST /api/users/signup, then POST /api/auth/login for the
+- [x] POST /api/email/send (returns expirationSeconds → drives the timer)
+- [x] POST /api/email/verify
+- [x] POST /api/users/signup, then POST /api/auth/login for the
       "auto login" CTA on the completion screen
 
 Social login (Google OAuth and the in-app browser hand-off) is split out to
