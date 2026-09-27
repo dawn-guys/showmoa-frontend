@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { PerformanceSummary } from "@/app/(tabs)/_types";
+import type { PerformanceListResponse } from "@/app/(tabs)/_types";
 
 interface SearchResultItemProps {
-  performance: PerformanceSummary;
+  performance: PerformanceListResponse;
 }
 
 /**
@@ -11,7 +11,7 @@ interface SearchResultItemProps {
  * (검색 리스트에는 하트 버튼이 없다 — docs/spec 검색 참조) <ul> 안에서 쓴다.
  */
 export function SearchResultItem({ performance }: SearchResultItemProps) {
-  const { id, title, posterUrl, genre } = performance;
+  const { id, name, posterUrl, genre } = performance;
 
   return (
     <li>
@@ -32,11 +32,14 @@ export function SearchResultItem({ performance }: SearchResultItemProps) {
         </span>
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate text-body1 font-medium text-foreground">
-            {title}
+            {name}
           </span>
-          <span className="truncate text-body3 text-muted-foreground">
-            {genre}
-          </span>
+          {/* 장르가 없는 공연(genre: null)은 장르 줄을 비우지 않고 아예 빼둔다. */}
+          {genre && (
+            <span className="truncate text-body3 text-muted-foreground">
+              {genre}
+            </span>
+          )}
         </span>
       </Link>
     </li>

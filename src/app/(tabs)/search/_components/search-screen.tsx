@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Header } from "@/app/_components/header";
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
 import { RegionFilterDrawer } from "@/shared/components/region-filter-drawer";
 import { GENRE_FILTER_OPTIONS } from "@/shared/constants/genre";
+import { formatRegionLabel } from "@/shared/constants/region";
 import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
 import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
-import { searchPerformances } from "@/shared/lib/search-performance";
-import { MOCK_SEARCH_PERFORMANCES } from "@/shared/mocks/search";
+import { useAreas } from "../_hooks/useAreas";
+import { useSearchPerformances } from "../_hooks/useSearchPerformances";
 import { SearchBar } from "./search-bar";
 import { SearchFilterBar } from "./search-filter-bar";
 import { SearchFilterChip } from "./search-filter-chip";
@@ -26,8 +27,8 @@ const TRANSITION = { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as const;
  * 검색 화면 본문. 검색창에 포커스가 들어가면 헤더가 사라지고 검색창이
  * 그 자리로 올라오는 검색 모드로 전환된다(뒤로가기 화살표로 복귀).
  * 장르 필터 버튼으로 바텀 시트를 열어 장르를 선택하며, 적용된 필터는
- * 칩으로 노출한다. 인풋 값이 바뀔 때마다 디바운스로 제목이 겹치는 공연을
- * 찾아 결과 목록으로 보여준다.
+ * 칩으로 노출한다. 인풋 값이 바뀔 때마다 디바운스로 확정된 검색어와 장르·지역
+ * 필터를 공연 검색 API에 보내 결과 목록으로 보여준다.
  */
 export function SearchScreen() {
   // 검색 모드(포커스) 여부. 인풋 포커스로 진입, 뒤로가기 화살표로 이탈한다.
@@ -54,9 +55,11 @@ export function SearchScreen() {
   const [regionOpen, setRegionOpen] = useOverlayFlag("region-filter");
 
   // 적용된 필터 칩 라벨(장르·지역). "전체"·빈 지역은 필터가 없는 상태라 칩에 넣지 않는다.
-  const chipLabels = [genre === "전체" ? null : genre, region || null].filter(
-    (label): label is string => label !== null,
-  );
+  // 지역은 URL에 API 값으로 저장돼 있어 칩에는 스펙 표기로 바꿔 보여준다.
+  const chipLabels = [
+    genre === "전체" ? null : genre,
+    region ? formatRegionLabel(region) : null,
+  ].filter((label): label is string => label !== null);
 
   // 인풋 onChange를 디바운스해 검색어를 확정한다(util로 뺀 디바운스 훅 사용).
   const debouncedSearch = useDebouncedCallback(
@@ -72,12 +75,15 @@ export function SearchScreen() {
   // 돋보기/Enter로 검색하면 대기 중인 디바운스를 건너뛰고 즉시 확정한다.
   const handleSubmit = () => debouncedSearch.flush();
 
-  // MOCK: 확정된 검색어와 제목이 겹치는 공연을 장르 필터와 함께 좁힌다.
-  const results = useMemo(
-    () =>
-      searchPerformances(MOCK_SEARCH_PERFORMANCES, debouncedQuery, { genre }),
-    [debouncedQuery, genre],
-  );
+  // 확정된 검색어와 장르·지역 필터로 공연을 검색한다(무한 스크롤).
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useSearchPerformances({ keyword: debouncedQuery, genre, region });
+
+  // 지역 목록은 드로워가 열릴 때만 조회한다.
+  const { data: areas, isPending: isAreasPending } = useAreas(regionOpen);
+
+  // 페이지들을 이어 붙여 하나의 목록으로 만든다.
+  const results = data?.pages.flatMap((page) => page.content) ?? [];
 
   return (
     <div className="relative">
@@ -117,7 +123,13 @@ export function SearchScreen() {
             {chipLabels.length > 0 && (
               <SearchFilterChip labels={chipLabels} className="self-start" />
             )}
-            <SearchResultList results={results} />
+            <SearchResultList
+              results={results}
+              isLoading={isLoading}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onLoadMore={fetchNextPage}
+            />
           </>
         ) : (
           <SearchFilterBar
@@ -137,6 +149,8 @@ export function SearchScreen() {
       <RegionFilterDrawer
         open={regionOpen}
         onOpenChange={setRegionOpen}
+        areas={areas ?? []}
+        isPending={isAreasPending}
         onApply={setRegion}
       />
     </div>

@@ -1,5 +1,78 @@
-// Provisional: based on screen spec, not the API contract.
+// Contract: PerformanceListResponse, PagePerformanceListResponse, AreaResponse (v3/api-docs)
 import type { GenreCategory } from "@/shared/constants/genre";
+
+/**
+ * 공연 목록 항목. GET /api/performances/search 응답 content의 원소다.
+ * 날짜는 yyyy-MM-dd(시각·오프셋 없음).
+ */
+export interface PerformanceListResponse {
+  id: number;
+  name: string;
+  posterUrl: string;
+  /**
+   * 통합 장르 값(연극·뮤지컬·콘서트·클래식·국악·기타).
+   * 백엔드 시드 데이터에 genre가 null인 항목이 있어 nullable이다.
+   */
+  genre: string | null;
+  /** 공연 상태(공연예정·공연중·공연완료) */
+  state: string;
+  /** 공연 시작일 yyyy-MM-dd */
+  startDate: string;
+  /** 공연 종료일 yyyy-MM-dd */
+  endDate: string;
+}
+
+/**
+ * GET /api/performances/search 응답(Spring Page).
+ * sort·pageable(SortObject·PageableObject)은 화면이 읽지 않아 넣지 않는다.
+ */
+export interface PagePerformanceListResponse {
+  content: PerformanceListResponse[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  /** 0부터 시작하는 현재 페이지 번호 */
+  number: number;
+  numberOfElements: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+/**
+ * GET /api/performances/search 쿼리 파라미터. 배열은 반복 키로 보낸다
+ * (pageable 객체가 아니다). districts는 areas 없이 보내면 400이다.
+ *
+ * interface가 아니라 type으로 둔다. apiFetch의 QueryParams는 인덱스 시그니처를
+ * 요구하고, 그 암시적 인덱스 시그니처는 type 별칭에만 붙는다.
+ */
+export type PerformanceSearchParams = {
+  keyword?: string;
+  genres?: string[];
+  areas?: string[];
+  districts?: string[];
+  state?: string;
+  /** yyyy-MM-dd */
+  startDate?: string;
+  /** yyyy-MM-dd */
+  endDate?: string;
+  /** 0부터 시작 */
+  page?: number;
+  size?: number;
+  sort?: string[];
+};
+
+/**
+ * GET /api/performances/areas 응답 원소. 실제 공연이 있는 지역만 내려오고,
+ * 이 값을 areas/districts 파라미터에 그대로 써야 한다.
+ * districts는 빈 배열일 수 있다(예: sido "해외").
+ */
+export interface AreaResponse {
+  sido: string;
+  districts: string[];
+}
+
+// Provisional: based on screen spec, not the API contract.
 
 /** 공연 진행 상태. 날짜에서 파생되지만 목업 편의를 위해 명시한다. */
 export type PerformanceStatus = "upcoming" | "ongoing" | "ended";
