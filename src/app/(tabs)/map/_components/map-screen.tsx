@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryState } from "nuqs";
-import { Toast } from "@/shared/components/toast";
+import { AnimatedToast } from "@/shared/components/toast";
+import { LoadingSpinner } from "@/shared/components/loading-spinner";
 import type {
   TheatreBoundsParams,
   TheatreMapResponse,
@@ -20,7 +21,10 @@ import {
   type MapViewHandle,
 } from "@/app/(tabs)/map/_components/map-view";
 import { MapSearchBar } from "@/app/(tabs)/map/_components/map-search-bar";
-import { MapSkeleton } from "@/app/(tabs)/map/_components/map-skeleton";
+import {
+  MapSkeleton,
+  MAP_SECTION_BOTTOM,
+} from "@/app/(tabs)/map/_components/map-skeleton";
 import { VenueBottomSheet } from "@/app/(tabs)/map/_components/venue-bottom-sheet";
 import { LocationConsentModal } from "@/app/(tabs)/map/_components/location-consent-modal";
 
@@ -44,7 +48,11 @@ export function MapScreen() {
 
   // 현재 조회 범위. 지도가 준비되기 전에는 null이라 조회하지 않는다.
   const [bounds, setBounds] = useState<TheatreBoundsParams | null>(null);
-  const { data: theatres, isLoading: theatresLoading } = useTheatres(bounds);
+  const {
+    data: theatres,
+    isLoading: theatresLoading,
+    isFetching: theatresFetching,
+  } = useTheatres(bounds);
   const { searchTheatres, isSearching } = useTheatreSearch();
 
   // 디테일 화살표 딥링크로 넘어온 극장 id(?venueId=). 극장 id는 숫자라 문자열로 비교한다.
@@ -113,7 +121,7 @@ export function MapScreen() {
   // 검색 실패 토스트는 잠시 후 자동으로 사라진다.
   useEffect(() => {
     if (!errorMessage) return;
-    const timer = setTimeout(() => setErrorMessage(null), 2500);
+    const timer = setTimeout(() => setErrorMessage(null), 3000);
     return () => clearTimeout(timer);
   }, [errorMessage]);
 
@@ -173,6 +181,31 @@ export function MapScreen() {
     dismiss();
   };
 
+  // 지도 준비 전 또는 첫 극장 조회 중에만 스켈레톤을 덮는다. 지도를 움직여
+  // 재조회할 때는 이전 마커가 유지되므로 스켈레톤이 다시 뜨지 않는다.
+  const isLoading = mapStatus === "loading" || theatresLoading;
+
+  // 검색은 지도가 크게 튀는 명시적 액션이라, 검색 중에는 "지도 검색 로딩" 화면
+  // (스켈레톤: 지도 영역을 덮은 스피너 + 바텀 시트 스켈레톤)으로 덮는다.
+  // 첫 로드와 같은 스켈레톤을 재사용한다. (Figma 지도-검색-로딩)
+  const showSkeleton = isLoading || isSearching;
+
+  // 스켈레톤을 덮지 않는 지도 이동 재조회는 스켈레톤 대신 지도 위 스피너로 알린다.
+  // 캐시·빠른 응답이면 스피너가 잠깐 떴다 사라져 깜빡임처럼 보이므로, 400ms 넘게
+  // 걸릴 때만 스피너를 노출한다(지연 표시).
+  const dragFetching = !showSkeleton && theatresFetching;
+  const [dragSpinnerReady, setDragSpinnerReady] = useState(false);
+  useEffect(() => {
+    if (!dragFetching) return;
+    const timer = setTimeout(() => setDragSpinnerReady(true), 400);
+    return () => {
+      clearTimeout(timer);
+      setDragSpinnerReady(false);
+    };
+  }, [dragFetching]);
+
+  const isRefetching = dragFetching && dragSpinnerReady;
+
   // 네이버 지도 키가 없으면 지도를 띄울 수 없어 플레이스홀더를 노출한다.
   if (!NAVER_MAP_CLIENT_ID) {
     return (
@@ -184,10 +217,6 @@ export function MapScreen() {
       </main>
     );
   }
-
-  // 지도 준비 전 또는 첫 극장 조회 중에만 스켈레톤을 덮는다. 지도를 움직여
-  // 재조회할 때는 이전 마커가 유지되므로 스켈레톤이 다시 뜨지 않는다.
-  const isLoading = mapStatus === "loading" || theatresLoading;
 
   return (
     <main className="relative h-dvh overflow-hidden bg-[#f6f6f6]">
@@ -202,8 +231,20 @@ export function MapScreen() {
         onBoundsChange={setBounds}
       />
 
-      {/* 로딩 중에는 스켈레톤을 지도 위에 얹는다. */}
-      {isLoading && <MapSkeleton />}
+      {/* 첫 로드·검색 중에는 스켈레톤을 지도 위에 얹는다. */}
+      {showSkeleton && <MapSkeleton />}
+
+      {/* 지도 이동 재조회 중 표시. 바텀 시트를 뺀 지도 영역의 가로·세로
+          중앙에서 20px 위에 둔다. 지도를 가리지 않도록 클릭은 통과시킨다. */}
+      {isRefetching && (
+        <div
+          aria-hidden
+          style={{ bottom: MAP_SECTION_BOTTOM }}
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-center"
+        >
+          <LoadingSpinner className="-translate-y-5" />
+        </div>
+      )}
 
       {/* 지도 인증/로드 실패 안내 */}
       {mapStatus === "error" && (
@@ -216,18 +257,20 @@ export function MapScreen() {
 
       {/* 상단 검색창 */}
       <div className="absolute inset-x-0 top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top)+12px)]">
-        <MapSearchBar onSearch={handleSearch} searching={isSearching} />
+        <MapSearchBar onSearch={handleSearch} />
       </div>
 
-      {/* 검색 실패 토스트 */}
-      {errorMessage && (
-        <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+72px)] z-40 flex justify-center px-4">
-          <Toast message={errorMessage} variant="error" />
-        </div>
-      )}
+      {/* 검색 실패 토스트: 회원가입 등과 같은 공용 AnimatedToast. 상단 검색창과
+          겹치지 않도록 위치만 검색창 아래로 내린다. */}
+      <AnimatedToast
+        open={!!errorMessage}
+        message={errorMessage ?? ""}
+        variant="error"
+        className="top-[calc(env(safe-area-inset-top)+72px)]"
+      />
 
-      {/* 극장 공연 정보 바텀 시트(로드 완료 후) */}
-      {!isLoading && focusedTheatre && (
+      {/* 극장 공연 정보 바텀 시트(로드·검색 완료 후) */}
+      {!showSkeleton && focusedTheatre && (
         <VenueBottomSheet
           theatre={focusedTheatre}
           performances={performances ?? EMPTY_PERFORMANCES}

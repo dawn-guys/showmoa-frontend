@@ -273,7 +273,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         type="button"
         aria-label="현재 위치로 이동"
         onClick={moveToCurrentLocation}
-        className="absolute right-4 bottom-[calc(var(--spacing-bottom-nav)+var(--spacing-venue-sheet)+16px)] flex size-11 items-center justify-center rounded-full bg-white text-primary shadow-[0_0_2px_0_rgb(0_0_0/0.4)] outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+        className="absolute right-4 bottom-[calc(var(--spacing-bottom-nav)+var(--spacing-venue-sheet)+16px)] z-10 flex size-11 items-center justify-center rounded-full bg-white text-primary shadow-[0_0_2px_0_rgb(0_0_0/0.4)] outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
       >
         <LocateFixed size={24} strokeWidth={2} aria-hidden />
       </button>
