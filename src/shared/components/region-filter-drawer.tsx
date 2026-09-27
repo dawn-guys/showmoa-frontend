@@ -10,6 +10,7 @@ import { CtaButton } from "@/shared/components/cta-button";
 import { LoadingSpinner } from "@/shared/components/loading-spinner";
 import {
   formatRegionFilter,
+  sidoLabel,
   type RegionFilter,
 } from "@/shared/constants/region";
 
@@ -32,12 +33,16 @@ function RegionColumn({
   list,
   selected,
   onSelect,
+  getLabel = (name) => name,
   className,
 }: {
   label: string;
+  /** 항목 값(전송·비교에 쓰는 API 값). */
   list: string[];
   selected: string | null;
   onSelect: (name: string) => void;
+  /** 값을 화면 표기로 바꾼다. 기본은 값 그대로. */
+  getLabel?: (name: string) => string;
   className?: string;
 }) {
   return (
@@ -62,7 +67,7 @@ function RegionColumn({
             selected === name ? "font-medium text-primary" : "text-disabled",
           )}
         >
-          {name}
+          {getLabel(name)}
         </button>
       ))}
     </div>
@@ -104,7 +109,9 @@ function RegionFilterDrawerBody({
           )}
         >
           {selected
-            ? formatRegionFilter(selected)
+            ? [sidoLabel(selected.sido), selected.district]
+                .filter(Boolean)
+                .join(" ")
             : "필터링 할 지역을 선택해 주세요"}
         </p>
       </div>
@@ -123,6 +130,8 @@ function RegionFilterDrawerBody({
               selected={selected?.sido ?? null}
               // 시/도를 바꾸면 이전에 고른 구/시는 버린다.
               onSelect={(sido) => setSelected({ sido })}
+              // 전송은 API 값(서울)으로 하고 화면에는 스펙 표기(서울특별시)를 쓴다.
+              getLabel={sidoLabel}
               className="border-r border-white/10"
             />
             <RegionColumn

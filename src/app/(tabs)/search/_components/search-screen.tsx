@@ -7,6 +7,7 @@ import { Header } from "@/app/_components/header";
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
 import { RegionFilterDrawer } from "@/shared/components/region-filter-drawer";
 import { GENRE_FILTER_OPTIONS } from "@/shared/constants/genre";
+import { formatRegionLabel } from "@/shared/constants/region";
 import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
 import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import { useAreas } from "../_hooks/useAreas";
@@ -54,9 +55,11 @@ export function SearchScreen() {
   const [regionOpen, setRegionOpen] = useOverlayFlag("region-filter");
 
   // 적용된 필터 칩 라벨(장르·지역). "전체"·빈 지역은 필터가 없는 상태라 칩에 넣지 않는다.
-  const chipLabels = [genre === "전체" ? null : genre, region || null].filter(
-    (label): label is string => label !== null,
-  );
+  // 지역은 URL에 API 값으로 저장돼 있어 칩에는 스펙 표기로 바꿔 보여준다.
+  const chipLabels = [
+    genre === "전체" ? null : genre,
+    region ? formatRegionLabel(region) : null,
+  ].filter((label): label is string => label !== null);
 
   // 인풋 onChange를 디바운스해 검색어를 확정한다(util로 뺀 디바운스 훅 사용).
   const debouncedSearch = useDebouncedCallback(
