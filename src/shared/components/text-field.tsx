@@ -10,7 +10,11 @@ interface TextFieldProps extends Omit<
 > {
   /** 라벨 텍스트(접근성용). hideLabel이 true여도 마크업에는 남는다. */
   label: string;
-  /** 검증 실패 메시지. 있으면 에러 스타일 + aria-invalid가 적용된다. */
+  /**
+   * 검증 실패 메시지. 있으면 에러 스타일 + aria-invalid가 적용되고,
+   * aria-describedby로 인풋과 연결된다. 호출 측이 넘긴 aria 값은 덮어쓰지
+   * 않고 합쳐진다.
+   */
   error?: string;
   /** 라벨을 시각적으로만 숨긴다(플레이스홀더만 노출하는 디자인). */
   hideLabel?: boolean;
@@ -37,11 +41,21 @@ export function TextField({
   id,
   className,
   ref,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: TextFieldProps) {
   const reactId = React.useId();
   const inputId = id ?? reactId;
   const errorId = `${inputId}-error`;
+
+  // aria 속성은 호출 측 값으로 덮어쓰지 않고 합친다. props를 그대로 펼치면
+  // 요청 실패용 aria를 함께 넘기는 화면에서 undefined가 아래 값을 지워,
+  // 에러 문구가 보이는데도 인풋과의 연결이 끊긴다.
+  const invalid = error || ariaInvalid ? true : undefined;
+  const describedBy =
+    [error ? errorId : null, ariaDescribedBy].filter(Boolean).join(" ") ||
+    undefined;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -58,8 +72,8 @@ export function TextField({
         <Input
           ref={ref}
           id={inputId}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
           className={cn(
             // 기본 테두리는 투명이라 포커스/에러 시에만 색이 드러나 레이아웃이 흔들리지 않는다.
             // 인풋 글자는 iOS 자동 확대(16px 미만) 방지를 위해 text-base를 유지한다.
