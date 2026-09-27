@@ -135,6 +135,12 @@ export function authorizationHeader(
 }
 
 /**
+ * 본문을 가질 수 없는 상태 코드. 이 상태로 Response를 만들면서 본문을 넘기면
+ * 빈 문자열이라도 생성자가 TypeError를 던진다.
+ */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+
+/**
  * 백엔드 응답을 브라우저로 그대로 전달한다. 백엔드의 Set-Cookie(JSESSIONID)는
  * 넘기지 않는다.
  */
@@ -143,8 +149,11 @@ export async function passthroughResponse(response: Response) {
   const contentType = response.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
 
-  return new Response(await response.text(), {
-    status: response.status,
-    headers,
-  });
+  // 이메일 인증·찜 삭제처럼 204를 주는 엔드포인트는 본문을 null로 넘겨야 한다.
+  // text()의 빈 문자열을 그대로 넘기면 TypeError가 나 프록시가 500이 된다.
+  const body = NULL_BODY_STATUSES.has(response.status)
+    ? null
+    : await response.text();
+
+  return new Response(body, { status: response.status, headers });
 }
