@@ -177,19 +177,19 @@ J and deferred to the end of the phase.
 
 ### C. Password find / update (/password/find, /password/update)
 
-- [ ] Find: email send + verify, then POST /api/users/password/reset.
+- [x] Find: email send + verify, then POST /api/users/password/reset.
       Success goes to /login; the spec has no copy or behaviour for this
       step (owner decided).
-- [ ] Update: the same flow and the same POST /api/users/password/reset.
+- [x] Update: the same flow and the same POST /api/users/password/reset.
       PATCH /api/users/me/password is not used — it requires currentPassword
       and the spec flow has no such input (owner decided). The email to
       verify is fixed to the `email` from GET /api/users/me; on success the
       screen logs in with the new password and goes to /setting, or to
       /login if that login fails.
-- [ ] Password rule: resolved in favour of the contract — letters (either
+- [x] Password rule: resolved in favour of the contract — letters (either
       case) + digits, min 8, no max. PasswordSetup and the three copy
       entries in docs/spec/auth.md were updated to match.
-- [ ] Reset failure: one toast with the existing spec copy
+- [x] Reset failure: one toast with the existing spec copy
       "유효하지 않은 이메일 입니다", no status-code branching (owner decided).
       400 also returns to the email step: the verification has expired or
       been consumed, so retrying in place always fails.
@@ -199,12 +199,59 @@ J and deferred to the end of the phase.
 
 ### D. Home (/)
 
-- [ ] Category performances: GET /api/performances/search?genres=...
-      (list response has no theatre name; confirm card fields)
+- [x] Category performances: GET /api/performances/search?genres=...
+      Confirmed: the list response has no theatre name, so the spec's
+      "공연장 위치" cannot be filled from this endpoint. The category card
+      does not show a venue, so only the featured section is affected.
+      Open backend question: `state` is stale. Of 347 records returned for
+      state=공연중, 111 have an endDate before today (e.g. id 8, ended
+      2026-09-19). The card caption reads `state` per Data Policy, so
+      those render "공연 중" although the run is over. Deriving the caption
+      from the dates on the client would contradict Data Policy ("render
+      values from response fields"), so this is left as is pending a
+      backend fix.
 - [ ] Wished performances (logged in): GET /api/wishlists
+      Implemented. The response has no genre, so the card's genre tag is
+      left out (PerformanceCard.genre is optional and the tag is hidden
+      when absent). Verification is blocked: see "Pending wishlist
+      verification (D)" below.
 - [ ] Today's schedule (logged in): GET /api/wishlists?date=<today>
+      Implemented. `date` is the user's local yyyy-MM-dd via date-fns
+      `format` (never toISOString). Verification is blocked: see
+      "Pending wishlist verification (D)" below.
 - [ ] Featured performances: BLOCKED (no endpoint)
+      Agreed basis: detail-page view count, highest first. Needs a way to
+      record a view (POST /api/performances/{id}/views preferred — see the
+      note below) and an endpoint to read the top one, with `theatre`
+      included so the spec's "공연장 위치" can be rendered.
 - [ ] Popular ranking: BLOCKED (no endpoint)
+      Agreed basis: wishlist count, top 5. No schema exposes a wish count
+      and the sort whitelist rejects wishlistCount/likeCount/viewCount
+      (400), so neither a dedicated endpoint nor a sort workaround exists.
+
+Note on the view counter (Featured): incrementing inside
+GET /api/performances/{id} would be inflated by this app's React Query
+defaults (staleTime 0, refetchOnWindowFocus) plus StrictMode double
+invocation. Prefer an explicit POST the screen calls once, or require
+server-side dedupe.
+
+Pending wishlist verification (D)
+
+Both sections above are implemented, but no screen can create a wish yet:
+the detail-page heart is Todo F and /wishlist is Todo G. With an empty
+wishlist the API always returns [], so only the empty state
+("좋아요 한 공연이 없습니다" / "오늘 공연 일정이 없습니다") is reachable.
+The populated list, the card status badge (D-N / 진행 중 / 공연 종료), the
+horizontal sliding, and the date filter are all unverified.
+
+Two ways to close this:
+
+- Wait for F or G, then re-check (tracked as an item under G).
+- Or seed a wish by hand now. While logged in, from the browser console:
+  fetch('/api/backend/api/wishlists/1611', { method: 'POST' })
+  201 on success, 409 if already wished. id 1611 ("토요명품",
+  2026-01-03~2026-12-26) spans today, so it exercises the 오늘 나의 공연
+  section as well. Add a second id that has not started for the D-N badge.
 
 ### E. Search (/search)
 
@@ -231,6 +278,9 @@ J and deferred to the end of the phase.
 - [ ] `status` (UPCOMING/ONGOING/ENDED) drives the disabled state
 - [ ] Title search: client-side filter on `name`
 - [ ] Genre filter: BLOCKED (`WishlistResponse` has no genre)
+- [ ] Re-check the home liked/today sections with real wishes, then check
+      off the two blocked items in Todo D (see "Pending wishlist
+      verification (D)")
 
 ### H. Calendar (/calendar)
 

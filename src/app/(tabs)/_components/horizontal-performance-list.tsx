@@ -1,10 +1,10 @@
 import { PerformanceCard } from "@/shared/components/performance-card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import type { PerformanceSummary } from "../_types";
-import { getPerformanceStatusLabel } from "../_lib/performance-status";
+import type { WishlistResponse } from "@/app/(tabs)/_types";
+import { getWishlistStatusLabel } from "../_lib/performance-status";
 
 interface HorizontalPerformanceListProps {
-  items: PerformanceSummary[];
+  items: WishlistResponse[];
   /** 스크린리더용 목록 이름 */
   label: string;
 }
@@ -27,13 +27,13 @@ export function HorizontalPerformanceList({
   return (
     <ul aria-label={label} className={scrollerClassName}>
       {items.map((performance) => (
-        <li key={performance.id} className={cardItemClassName}>
+        <li key={performance.performanceId} className={cardItemClassName}>
+          {/* 찜 목록 응답에 genre가 없어 장르 태그는 넘기지 않는다. */}
           <PerformanceCard
-            id={performance.id}
-            title={performance.title}
-            genre={performance.genre}
+            id={performance.performanceId}
+            title={performance.name}
             posterUrl={performance.posterUrl}
-            statusLabel={getPerformanceStatusLabel(performance)}
+            statusLabel={getWishlistStatusLabel(performance)}
           />
         </li>
       ))}

@@ -1,16 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_TODAY_EMPTY, MOCK_TODAY_PERFORMANCES } from "@/shared/mocks/home";
+import { format } from "date-fns";
+import type { WishlistParams, WishlistResponse } from "@/app/(tabs)/_types";
+import { apiFetch } from "@/shared/lib/api";
 
-/** 캘린더에 저장한 오늘의 공연 목록을 조회한다(빈 목록 가능). */
+/**
+ * 오늘 공연 중인(공연 기간에 오늘이 포함되는) 찜한 공연 목록을 조회한다.
+ *
+ * date는 사용자 타임존 기준 yyyy-MM-dd다. toISOString()은 UTC로 바꿔서
+ * 자정 전후에 하루가 밀리므로 쓰지 않고, 로컬 시각을 그대로 포맷한다.
+ */
 export function useTodayPerformances() {
+  const today = format(new Date(), "yyyy-MM-dd");
+
   return useQuery({
-    queryKey: ["home", "today"],
-    // MOCK: Phase 2에서 queryFn를 실제 오늘 일정 요청으로 교체한다.
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      if (MOCK_TODAY_EMPTY) return [];
-      // 종료된 공연은 목록에 노출하지 않는다.
-      return MOCK_TODAY_PERFORMANCES.filter((p) => p.status !== "ended");
+    queryKey: ["wishlists", "date", today],
+    queryFn: ({ signal }) => {
+      const searchParams: WishlistParams = { date: today };
+
+      return apiFetch<WishlistResponse[]>("/api/wishlists", {
+        searchParams,
+        signal,
+      });
     },
   });
 }

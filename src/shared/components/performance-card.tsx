@@ -4,10 +4,13 @@ import { Badge } from "@/shared/components/ui/badge";
 import type { GenreCategory } from "@/shared/constants/genre";
 
 interface PerformanceCardProps {
-  id: string;
+  id: number;
   title: string;
-  /** 장르 카테고리 */
-  genre: GenreCategory;
+  /**
+   * 장르 카테고리. 찜 목록 응답(WishlistResponse)에는 장르가 없어
+   * 넘기지 않을 수 있고, 없으면 장르 태그를 숨긴다.
+   */
+  genre?: GenreCategory;
   /** 포스터 이미지 URL. 없으면 플레이스홀더가 노출된다. */
   posterUrl?: string;
   /** 진행 상태 뱃지 문구(예: "공연 중"). 없으면 뱃지를 숨긴다. */
@@ -50,9 +53,11 @@ export function PerformanceCard({
         <h3 className="truncate text-body3 font-medium text-foreground">
           {title}
         </h3>
-        <Badge variant="secondary" className="w-fit">
-          {genre}
-        </Badge>
+        {genre && (
+          <Badge variant="secondary" className="w-fit">
+            {genre}
+          </Badge>
+        )}
       </Link>
     </article>
   );

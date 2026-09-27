@@ -7,7 +7,7 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import { AnimatedToast, type ToastVariant } from "@/shared/components/toast";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
-import { getCategoryCaption } from "@/app/(tabs)/_lib/performance-status";
+import { getSummaryCaption } from "@/app/(tabs)/_lib/performance-status";
 import { usePerformanceDetail } from "@/app/(tabs)/detail/[id]/_hooks/usePerformanceDetail";
 import { formatPerformancePeriod } from "@/app/(tabs)/detail/[id]/_lib/detail-format";
 import { PosterViewer } from "@/app/(tabs)/detail/[id]/_components/poster-viewer";
@@ -126,7 +126,7 @@ export function DetailScreen({ id }: DetailScreenProps) {
               {detail.genre}
             </li>
             <li className="rounded-[20px] bg-[#313131] px-2 py-0.5 text-body3 font-medium text-foreground">
-              {getCategoryCaption(detail)}
+              {getSummaryCaption(detail)}
             </li>
           </ul>
         </div>
