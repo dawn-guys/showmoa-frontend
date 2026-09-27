@@ -177,12 +177,25 @@ J and deferred to the end of the phase.
 
 ### C. Password find / update (/password/find, /password/update)
 
-- [ ] Find: email send + verify, then POST /api/users/password/reset
-- [ ] Update: PATCH /api/users/me/password
-      BLOCKED: API needs currentPassword; the spec flow has no such input
+- [ ] Find: email send + verify, then POST /api/users/password/reset.
+      Success goes to /login; the spec has no copy or behaviour for this
+      step (owner decided).
+- [ ] Update: the same flow and the same POST /api/users/password/reset.
+      PATCH /api/users/me/password is not used — it requires currentPassword
+      and the spec flow has no such input (owner decided). The email to
+      verify is fixed to the `email` from GET /api/users/me; on success the
+      screen logs in with the new password and goes to /setting, or to
+      /login if that login fails.
 - [ ] Password rule: resolved in favour of the contract — letters (either
       case) + digits, min 8, no max. PasswordSetup and the three copy
       entries in docs/spec/auth.md were updated to match.
+- [ ] Reset failure: one toast with the existing spec copy
+      "유효하지 않은 이메일 입니다", no status-code branching (owner decided).
+      400 also returns to the email step: the verification has expired or
+      been consumed, so retrying in place always fails.
+      Unconfirmed: the status code for a verified email with no account.
+      Reset checks verification first, so it is unreachable without a
+      mailbox the tester owns; owner confirms by test.
 
 ### D. Home (/)
 

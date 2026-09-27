@@ -1,5 +1,6 @@
 // Contract: UserResponse, TokenResponse, LoginRequest, RefreshTokenRequest,
-// EmailSendRequest, EmailSendResponse, EmailVerifyRequest, SignupRequest (v3/api-docs)
+// EmailSendRequest, EmailSendResponse, EmailVerifyRequest, SignupRequest,
+// PasswordResetRequest (v3/api-docs)
 
 /** GET /api/users/me, POST /api/users/signup, PATCH /api/users/me/password 응답 */
 export interface UserResponse {
@@ -45,4 +46,10 @@ export interface EmailVerifyRequest {
 export interface SignupRequest {
   email: string;
   password: string;
+}
+
+/** POST /api/users/password/reset 요청 바디. 비밀번호 찾기·변경이 함께 쓴다. */
+export interface PasswordResetRequest {
+  email: string;
+  newPassword: string;
 }

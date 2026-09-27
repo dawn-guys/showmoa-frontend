@@ -26,7 +26,7 @@ const CONFIRM_ERROR = "비밀 번호와 일치하지 않습니다. 비밀번호�
 // CTA 문구는 spec에 없어 Figma(node 488:5371, 488:5423) 값을 따른다.
 const NEXT_CTA = "다음";
 
-// 비밀번호 검증: 계약(SignupRequest·PasswordResetRequest·ChangePasswordRequest)의
+// 비밀번호 검증: 계약(SignupRequest·PasswordResetRequest)의
 // pattern ^(?=.*[A-Za-z])(?=.*\d).+$ 와 minLength 8을 그대로 옮겼다. 대소문자를
 // 가리지 않고, 최대 길이 제한은 없다.
 const isValidPassword = (value: string) =>
@@ -45,6 +45,13 @@ interface PasswordSetupProps {
    * "새로운 비밀번호" 문구를 사용한다(docs/spec/auth.md).
    */
   variant?: "signup" | "reset";
+  /**
+   * onComplete가 보낸 요청이 실패했다. 확인 인풋 테두리에 에러 색을 넣는다
+   * (docs/spec/common-ui.md · 인풋 3). 문구는 호출 측 토스트가 안내한다.
+   */
+  submitFailed?: boolean;
+  /** submitFailed일 때 확인 인풋과 aria-describedby로 연결할 토스트 id. */
+  errorToastId?: string;
 }
 
 /**
@@ -57,6 +64,8 @@ export function PasswordSetup({
   onComplete,
   isSubmitting = false,
   variant = "signup",
+  submitFailed = false,
+  errorToastId,
 }: PasswordSetupProps) {
   // 메인 문구만 variant에 따라 달라진다(서브·placeholder·에러는 동일).
   const setMain = variant === "reset" ? SET_MAIN_RESET : SET_MAIN;
@@ -70,6 +79,10 @@ export function PasswordSetup({
   // 블러 검증 실패 메시지(인풋 인라인 표시).
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
   const [confirmError, setConfirmError] = React.useState<string | null>(null);
+  // 요청 실패 테두리는 호출 측이 넘기지만, 사용자가 확인 값을 고치면 바로
+  // 걷어낸다(이메일 인증 블록의 요청 실패 처리와 동일한 동작).
+  const [confirmEdited, setConfirmEdited] = React.useState(false);
+  const showSubmitError = submitFailed && !confirmEdited;
 
   const passwordValid = isValidPassword(password);
   const confirmValid = confirm.length > 0 && confirm === password;
@@ -99,6 +112,7 @@ export function PasswordSetup({
   const handleConfirmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setConfirm(e.target.value);
     setConfirmError(null);
+    setConfirmEdited(true);
   };
 
   const handleConfirmBlur = () => {
@@ -112,6 +126,7 @@ export function PasswordSetup({
       setConfirmError(CONFIRM_ERROR);
       return;
     }
+    setConfirmEdited(false);
     onComplete(password);
   };
 
@@ -187,6 +202,10 @@ export function PasswordSetup({
                 onChange={handleConfirmChange}
                 onBlur={handleConfirmBlur}
                 error={confirmError ?? undefined}
+                aria-invalid={showSubmitError || undefined}
+                aria-describedby={
+                  showSubmitError && errorToastId ? errorToastId : undefined
+                }
               />
             </motion.div>
             <CtaButton
