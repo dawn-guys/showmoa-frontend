@@ -1,11 +1,19 @@
 /// <reference types="navermaps" />
+import type { TheatreBoundsParams } from "@/app/(tabs)/map/_types";
+
 // 네이버 지도 JS API v3 관련 상수·헬퍼. process.env.NEXT_PUBLIC_* 는
 // 빌드 시 치환되도록 반드시 직접 접근한다(동적 키 접근 금지).
 export const NAVER_MAP_CLIENT_ID = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
 export const NAVER_MAP_STYLE_ID = process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID;
 
-/** 위치 미동의·실패 시 사용하는 기본 지도 중심(서울시청). */
-export const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 } as const;
+/**
+ * 위치 미동의·실패 시 사용하는 기본 지도 중심(혜화역).
+ *
+ * 동의 모달에서 취소를 누르거나 브라우저 위치 조회가 실패하면 지도는 이 중심에
+ * 머물고, 이 좌표 기준 뷰포트로 극장 목록을 조회한다. 대학로 소극장이 밀집한
+ * 지역이라 첫 화면에 마커가 충분히 잡힌다(같은 줌에서 서울시청 27건 → 121건).
+ */
+export const DEFAULT_CENTER = { lat: 37.5823, lng: 127.0018 } as const;
 
 /** 기본 줌 레벨. */
 export const DEFAULT_ZOOM = 15;
@@ -65,4 +73,30 @@ export function venueMarkerAnchor(selected: boolean): { x: number; y: number } {
 /** 사용자 현재 위치 마커 HTML(주조색 점 + 반투명 링). */
 export function buildUserMarkerContent(): string {
   return `<div style="position:relative;width:22px;height:22px;"><div style="position:absolute;inset:0;border-radius:9999px;background:var(--primary);opacity:0.25;"></div><div style="position:absolute;top:50%;left:50%;width:12px;height:12px;transform:translate(-50%,-50%);border-radius:9999px;background:var(--primary);border:2px solid #ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.35);"></div></div>`;
+}
+
+/**
+ * 지도 뷰포트를 GET /api/theatres 의 조회 파라미터로 변환한다.
+ *
+ * getBounds()·getCenter()는 좌표계에 따라 PointBounds·Point일 수도 있는 유니온
+ * 타입이지만, LatLng로 만든 지도이므로 LatLngBounds·LatLng가 돌아온다. 위경도는
+ * 반드시 lat()·lng() 접근자로 읽는다(Point의 x·y로 읽으면 순서가 뒤바뀐다).
+ *
+ * 중심 좌표를 함께 넘겨 결과가 지도 중심에서 가까운 순으로 오고 nearest가
+ * 실제 최근접 극장에 붙게 한다.
+ */
+export function toBoundsParams(map: naver.maps.Map): TheatreBoundsParams {
+  const bounds = map.getBounds() as naver.maps.LatLngBounds;
+  const sw = bounds.getSW();
+  const ne = bounds.getNE();
+  const center = map.getCenter() as naver.maps.LatLng;
+
+  return {
+    swLat: sw.lat(),
+    swLng: sw.lng(),
+    neLat: ne.lat(),
+    neLng: ne.lng(),
+    lat: center.lat(),
+    lng: center.lng(),
+  };
 }
