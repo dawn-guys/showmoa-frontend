@@ -44,6 +44,15 @@ interface EmailVerificationProps {
    * 뒤 단계의 요청(회원가입·비밀번호 재설정)이 이 이메일을 그대로 쓴다.
    */
   onVerified: (email: string) => void;
+  /**
+   * 인증할 이메일을 이 값으로 고정한다. 넘기면 이메일 인풋이 수정 불가가 되고
+   * 형식 검증은 통과한 상태로 시작한다. 로그인 상태로 진행하는 비밀번호 변경이
+   * 현재 계정 이메일(GET /api/users/me)을 고정하는 데 쓴다.
+   *
+   * 마운트 시점의 값만 쓴다. 값이 늦게 도착하는 화면은 값이 확정된 뒤에 이
+   * 컴포넌트를 렌더해야 한다.
+   */
+  fixedEmail?: string;
 }
 
 /**
@@ -56,11 +65,14 @@ interface EmailVerificationProps {
  * 요청은 useEmailVerification(POST /api/email/send, /api/email/verify)이 맡고,
  * 타이머는 발송 응답의 expirationSeconds로 구동된다.
  */
-export function EmailVerification({ onVerified }: EmailVerificationProps) {
+export function EmailVerification({
+  onVerified,
+  fixedEmail,
+}: EmailVerificationProps) {
   const { sendCode, isSending, verifyCode, isVerifying } =
     useEmailVerification();
 
-  const [email, setEmail] = React.useState("");
+  const [email, setEmail] = React.useState(fixedEmail ?? "");
   const [code, setCode] = React.useState("");
 
   // 발송 성공 시각(ms)과 응답의 유효 시간(초). 발송 전에는 null이고, 이 값이
@@ -199,6 +211,8 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
               enterKeyHint="send"
               placeholder={EMAIL_PLACEHOLDER}
               value={email}
+              // 이메일이 고정된 화면(비밀번호 변경)은 수정 불가로 노출한다.
+              readOnly={fixedEmail !== undefined}
               onChange={handleEmailChange}
               onBlur={handleEmailBlur}
               error={emailError ?? undefined}
