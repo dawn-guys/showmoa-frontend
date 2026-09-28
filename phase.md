@@ -62,7 +62,7 @@ Types:
   already live. Do not move or reorganize type files. Create a new type file
   only when no existing one fits, following the existing folder pattern.
 - Each API type maps 1:1 to a contract schema and keeps the schema name
-  (e.g. PerformanceResponse, WishlistResponse, TokenResponse). Start the file
+  (e.g. PerformanceResponse, WishlistItemResponse, TokenResponse). Start the file
   or block with `// Contract: <SchemaName> (v3/api-docs)`. Remove the
   `// Provisional:` header once a file contains only contract types.
 - Do not re-declare API fields inside UI types. Derive UI types from API
@@ -72,10 +72,11 @@ Types:
   optional by default. Check a real response and mark a field nullable or
   optional only when it is actually absent or null (e.g. `endDate` for
   open-run performances).
-- `status` in WishlistResponse is a union literal
+- `status` in WishlistItemResponse is a union literal
   ('UPCOMING' | 'ONGOING' | 'ENDED'). `state` and `genre` are plain strings
   in the contract; type them as string until real values are confirmed, then
-  narrow only with my approval.
+  narrow only with my approval. Confirmed `genre` values are 연극, 뮤지컬,
+  콘서트, 클래식·국악, 기타, and null — so `genre` is nullable everywhere.
 - Type request bodies and query params from the contract too (search params,
   wishlist month/date, theatre bounds). Form schemas use Zod with spec
   rules; response bodies are not validated with Zod.
@@ -93,9 +94,12 @@ Contract conventions:
 - Genres: the UI uses the 5 service categories; the API filters by raw
   genre names. Map categories to raw names in
   src/shared/constants/genre.ts (mapping is in docs/spec common-ui.md).
-- Wishlist: POST returns 201 (409 if already wished, 404 if no such
-  performance); DELETE returns 204 (404 if not wished). Treat 409 on add
-  as already wished.
+- Wishlist writes live under the performance, not under /api/wishlists:
+  POST/DELETE /api/performances/{performanceId}/wishlist. POST returns 201
+  (409 if already wished, 404 if no such performance); DELETE returns 204
+  (404 if not wished). Ended performances can be wished and unwished.
+  Do not use optimistic updates and do not treat 409 on add as success —
+  the contract is written on that assumption. Invalidate and re-read instead.
 - Never place a user id in a URL; identity comes from the token.
 - Anything marked BLOCKED below stays on mocks with its `// MOCK:` marker.
   Do not invent an endpoint or workaround.
@@ -201,8 +205,10 @@ J and deferred to the end of the phase.
 
 - [ ] Category performances: GET /api/performances/search?genres=...
       (list response has no theatre name; confirm card fields)
-- [ ] Wished performances (logged in): GET /api/wishlists
-- [ ] Today's schedule (logged in): GET /api/wishlists?date=<today>
+- [ ] Wished performances (logged in): GET /api/wishlists (Slice — see G)
+- [ ] Today's schedule (logged in): there is no `date` param and no per-day
+      endpoint. Derive it from GET /api/wishlists/calendar?month=<this month>
+      by keeping the performances whose startDate..endDate covers today
 - [ ] Featured performances: BLOCKED (no endpoint)
 - [ ] Popular ranking: BLOCKED (no endpoint)
 
@@ -219,26 +225,48 @@ J and deferred to the end of the phase.
 
 - [ ] GET /api/performances/{id} (auth optional; `isWished` is false for
       guests)
-- [ ] POST/DELETE /api/wishlists/{performanceId} from the like CTA;
-      guest keeps the login prompt modal; failure toast from spec
+- [ ] POST/DELETE /api/performances/{performanceId}/wishlist from the like
+      CTA; guest keeps the login prompt modal; failure toast from spec
 - [ ] Missing from contract: jibun address, building name, detail images,
       price. Report per Data Policy; do not fill from mocks. BLOCKED
 
 ### G. Wishlist (/wishlist)
 
-- [ ] GET /api/wishlists (ordered by start date ascending)
-- [ ] DELETE /api/wishlists/{performanceId} from the heart (ended items too)
+- [ ] GET /api/wishlists with infinite scroll. The response is a Slice
+      (`content`, `page`, `size`, `hasNext`), not an array and not a Spring
+      Page: there is no total count, so paging keys off `hasNext` only.
+      Keep the server order as-is — not-ended first (ONGOING + UPCOMING),
+      ended last, most recently wished within each group — and do not
+      re-sort on the client. Dedupe by `performanceId`: the contract states
+      the front end owns this, because wishing/unwishing mid-scroll can
+      shift page boundaries and repeat an item.
+- [ ] DELETE /api/performances/{performanceId}/wishlist from the heart
+      (ended items too). Note the path is nested under the performance, not
+      under /api/wishlists. Do not update optimistically — the contract is
+      written on the assumption that the front end does not, so invalidate
+      the list and re-read from the server.
 - [ ] `status` (UPCOMING/ONGOING/ENDED) drives the disabled state
-- [ ] Title search: client-side filter on `name`
-- [ ] Genre filter: BLOCKED (`WishlistResponse` has no genre)
+- [ ] Title search: client-side filter on `name` (no server-side param)
+- [ ] Genre filter: client-side filter on `genre`. `WishlistItemResponse`
+      carries it, so this is no longer BLOCKED. Compare against
+      GENRE_API_VALUES; `genre` is nullable, as it is in the search list.
 
 ### H. Calendar (/calendar)
 
-- [ ] GET /api/wishlists?month=yyyy-MM for month/week views; derive
-      per-day lists on the client to avoid extra calls
-- [ ] GET /api/wishlists?date=yyyy-MM-dd only if a per-day call is truly
-      needed (never send `month` and `date` together: 400)
-- [ ] Heart in bottom sheet/week list: DELETE wishlist
+- [ ] GET /api/wishlists/calendar?month=yyyy-MM for month/week views and the
+      bottom sheet. Note this is its own endpoint, not a `month` param on
+      /api/wishlists. It returns a plain `WishlistCalendarResponse[]` with no
+      paging, most recently wished first, holding only the performances whose
+      run overlaps that month. Derive per-day lists on the client; there is no
+      per-day endpoint, and `date` is not a parameter anywhere.
+- [ ] `WishlistCalendarResponse` covers everything the sheet and week list
+      show (name, theatreName, posterUrl, startDate, endDate). It has no
+      `status` and no `genre`, unlike `WishlistItemResponse`.
+- [ ] The per-performance colour in the month cells is not in the contract.
+      Derive it deterministically from `performanceId` on the client; confirm
+      the palette with me before building it.
+- [ ] Heart in bottom sheet/week list: DELETE
+      /api/performances/{performanceId}/wishlist, same as G
 
 ### I. Map (/map) and Setting (/setting)
 
