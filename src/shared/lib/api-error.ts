@@ -6,12 +6,24 @@
  */
 export class ApiError extends Error {
   readonly status: number;
+  /**
+   * problem+json의 type URI(예: ".../errors/wishlist-not-found").
+   * 같은 상태 코드가 여러 뜻을 가질 때 구분하는 기계용 값이다. 한국어 detail로
+   * 분기하면 문구가 바뀌는 순간 깨지므로 분기는 이 값으로 한다.
+   */
+  readonly type: string | null;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, type: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.type = type;
   }
+}
+
+/** type URI의 마지막 조각이 주어진 이름과 같은지 본다(예: "wishlist-not-found"). */
+export function hasErrorType(error: unknown, name: string): boolean {
+  return isApiError(error) && error.type?.split("/").pop() === name;
 }
 
 /** ApiError 여부를 좁힌다. instanceof는 번들 경계를 넘으면 불안정하므로 name으로 본다. */
@@ -48,12 +60,17 @@ export async function toApiError(response: Response): Promise<ApiError> {
     try {
       const parsed: unknown = JSON.parse(body);
       if (typeof parsed === "object" && parsed !== null) {
+        const type =
+          "type" in parsed && typeof parsed.type === "string"
+            ? parsed.type
+            : null;
+
         if ("detail" in parsed && typeof parsed.detail === "string") {
-          return new ApiError(response.status, parsed.detail);
+          return new ApiError(response.status, parsed.detail, type);
         }
         // problem+json이 아닌 응답이 섞여 들어올 때를 위한 대비.
         if ("message" in parsed && typeof parsed.message === "string") {
-          return new ApiError(response.status, parsed.message);
+          return new ApiError(response.status, parsed.message, type);
         }
       }
     } catch {

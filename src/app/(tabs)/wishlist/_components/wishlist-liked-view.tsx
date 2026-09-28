@@ -1,63 +1,89 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HamburgerMenuLinearIcon } from "@solar-icons/react";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
-import type { GenreFilterOption } from "@/shared/constants/genre";
-import type { PerformanceStatus } from "@/app/(tabs)/_types";
-import { useWishlist } from "../_hooks/useWishlist";
-
-// 목록 정렬 우선순위. 낮을수록 위로 온다.
-// 같은 상태 안에서는 원본(최신 추가) 순서를 그대로 유지한다.
-const STATUS_ORDER: Record<PerformanceStatus, number> = {
-  ongoing: 0, // 상영 중
-  upcoming: 1, // 상영 예정
-  ended: 2, // 상영 종료(항상 마지막)
-};
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
+import { LoadMoreFooter } from "@/shared/components/load-more-footer";
+import { AnimatedToast } from "@/shared/components/toast";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import {
+  GENRE_API_VALUES,
+  type GenreFilterOption,
+} from "@/shared/constants/genre";
+import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
+import {
+  useToggleWishlist,
+  WISHLIST_ERROR_MESSAGE,
+} from "@/shared/hooks/useToggleWishlist";
+import { useWishlist } from "../_hooks/useWishlist";
 import { WishlistItem } from "./wishlist-item";
 import { WishlistSearch } from "./wishlist-search";
 
+/** 찜 해제 실패 토스트가 떠 있는 시간(ms). 상세 화면과 같은 길이로 맞춘다. */
+const TOAST_DURATION_MS = 2500;
+
 /**
  * 찜-로그인 화면 본문. 좋아요한 공연 목록과 함께 장르 필터(바텀 시트)와
- * 제목 검색을 제공한다. 하트로 목록에서 제외할 수 있고, 종료 공연도 노출한다.
+ * 제목 검색을 제공한다. 하트로 찜을 해제할 수 있고, 종료 공연도 노출한다.
+ *
+ * 목록 순서는 서버가 준 그대로 쓴다(미종료 먼저 · 종료 나중 · 최근 찜순).
+ * 장르와 제목은 서버가 필터 파라미터를 받지 않아 클라이언트에서 거른다.
  */
 export function WishlistLikedView() {
-  const { data, isLoading } = useWishlist();
+  const {
+    data,
+    isLoading,
+    isError,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useWishlist();
+  // 찜 목록에는 추가 동선이 없어 공통 훅에서 remove만 꺼내 쓴다.
+  const {
+    remove: removeWishlist,
+    isError: isRemoveError,
+    reset: resetRemove,
+  } = useToggleWishlist();
 
   // 적용된 장르 필터. 제목 옆에 현재 상태로 표시된다.
   const [genre, setGenre] = useState<GenreFilterOption>("전체");
-  // 하트로 제외한 공연 id. 목록에서 즉시 감춘다(Phase 1 로컬 상태).
-  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   // 검색으로 확정된 질의어. 돋보기/Enter로 커밋한다.
   const [query, setQuery] = useState("");
 
   // 바텀 시트 열림 상태(공통 훅으로 히스토리 미누적).
   const [filterOpen, setFilterOpen] = useOverlayFlag("filter");
 
-  const liked = useMemo(
-    () => (data ?? []).filter((p) => !removedIds.has(p.id)),
-    [data, removedIds],
-  );
+  // 실패 토스트는 잠시 후 스스로 사라진다. 뮤테이션 상태를 되돌려 닫는다.
+  useEffect(() => {
+    if (!isRemoveError) return;
+    const timer = setTimeout(resetRemove, TOAST_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [isRemoveError, resetRemove]);
+
+  const liked = useMemo(() => {
+    // content가 없는 응답(계약과 다른 모양)이 오면 그 페이지는 비운다. 이 가드가
+    // 없으면 flatMap이 undefined를 원소로 남겨 아래 map에서 페이지가 통째로 죽는다.
+    const pages = data?.pages.flatMap((page) => page.content ?? []) ?? [];
+    // 스크롤 도중 찜 해제로 페이지 경계가 밀리면 같은 공연이 두 번 올 수 있다.
+    // 계약이 공연 id로 프론트가 dedupe하는 것을 전제한다.
+    return [
+      ...new Map(pages.map((item) => [item.performanceId, item])).values(),
+    ];
+  }, [data]);
 
   const filtered = useMemo(
     () =>
       liked
-        .filter((p) => genre === "전체" || p.genre === genre)
-        .filter((p) => query === "" || p.title.includes(query))
-        // 상태 순으로 안정 정렬(종료는 맨 뒤). 같은 상태 내 최신 추가 순 유지.
-        .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
+        .filter(
+          (item) => genre === "전체" || item.genre === GENRE_API_VALUES[genre],
+        )
+        .filter((item) => query === "" || item.name.includes(query)),
     [liked, genre, query],
   );
 
-  const handleRemove = (id: string) => {
-    setRemovedIds((prev) => new Set(prev).add(id));
-  };
-
-  const isEmpty = !isLoading && liked.length === 0;
+  const isEmpty = !isLoading && !isError && liked.length === 0;
   const isFilteredEmpty =
-    !isLoading && liked.length > 0 && filtered.length === 0;
+    !isLoading && !isError && liked.length > 0 && filtered.length === 0;
 
   return (
     <div className="flex min-h-[calc(100dvh-5rem-var(--spacing-bottom-nav))] flex-col gap-3.75 px-4">
@@ -93,6 +119,14 @@ export function WishlistLikedView() {
         {isLoading ? (
           // 로딩 스켈레톤: 검색창 아래 가로 꽉 찬 단일 블록(Figma 참조).
           <Skeleton className="h-[50px] w-full rounded-[5px]" aria-hidden />
+        ) : isError ? (
+          // 조회 실패: 빈 상태와 같은 자리에 안내 문구를 둔다(지도 실패와 같은 결).
+          <p
+            role="alert"
+            className="text-4.5 m-auto text-center text-muted-foreground"
+          >
+            좋아요 한 공연을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요
+          </p>
         ) : isEmpty ? (
           // 빈 상태 문구는 검색창과 하단 나브 사이 영역 중앙에 둔다.
           <p className="text-4.5 m-auto text-center text-muted-foreground">
@@ -106,11 +140,19 @@ export function WishlistLikedView() {
           <ul className="flex flex-col gap-3.5">
             {filtered.map((performance) => (
               <WishlistItem
-                key={performance.id}
+                key={performance.performanceId}
                 performance={performance}
-                onRemove={() => handleRemove(performance.id)}
+                onRemove={() => removeWishlist(performance.performanceId)}
               />
             ))}
+
+            {hasNextPage && (
+              <LoadMoreFooter
+                onIntersect={fetchNextPage}
+                isFetching={isFetchingNextPage}
+                label="좋아요 한 공연 더 불러오는 중"
+              />
+            )}
           </ul>
         )}
       </section>
@@ -119,6 +161,13 @@ export function WishlistLikedView() {
         open={filterOpen}
         onOpenChange={setFilterOpen}
         onApply={setGenre}
+      />
+
+      {/* 찜 해제 실패 토스트 */}
+      <AnimatedToast
+        open={isRemoveError}
+        message={WISHLIST_ERROR_MESSAGE}
+        variant="error"
       />
     </div>
   );
