@@ -3,11 +3,19 @@ import {
   AltArrowRightLinearIcon,
   CopyLineDuotoneIcon,
 } from "@solar-icons/react";
-import type { VenueDetail } from "@/app/(tabs)/detail/[id]/_types";
+import type { TheatreInfo } from "@/app/(tabs)/_types";
 import { VenueMiniMap } from "@/app/(tabs)/detail/[id]/_components/venue-mini-map";
 
 interface VenueSectionProps {
-  venue: VenueDetail;
+  /** 공연장 정보(이름·도로명 주소·전화번호·좌표). PerformanceResponse.theatre. */
+  theatre: TheatreInfo;
+  // MOCK: 아래 세 값은 계약에 없어 목업으로 채운다(오너 결정 대기).
+  /** 지번 주소 */
+  jibunAddress: string;
+  /** 건물명 */
+  buildingName: string;
+  /** /map?venueId= 딥링크에 쓰는 공연장 id */
+  venueId: string;
   /** 주소 텍스트 복사 요청(성공/실패 토스트는 상위에서 처리). */
   onCopyAddress: (text: string) => void;
 }
@@ -37,17 +45,24 @@ function CopyableAddress({
 }
 
 /**
- * 공연장 주소 섹션. 제목 옆 화살표로 지도 페이지(/map?search=주소)로 이동하고,
+ * 공연장 주소 섹션. 제목 옆 화살표로 지도 페이지(/map?venueId=)로 이동하고,
  * 미니 지도·주소(지번/도로명, 복사)·건물명·전화번호를 보여준다.
+ * 전화번호는 등록되지 않은 극장이 있어 값이 있을 때만 노출한다.
  */
-export function VenueSection({ venue, onCopyAddress }: VenueSectionProps) {
+export function VenueSection({
+  theatre,
+  jibunAddress,
+  buildingName,
+  venueId,
+  onCopyAddress,
+}: VenueSectionProps) {
   return (
     <section className="mb-15 flex flex-col gap-5">
       {/* -my로 제목 줄 높이는 유지하면서 화살표 링크 히트 영역은 44px로 넓힌다. */}
       <div className="flex items-center justify-between">
         <h2 className="text-h1 font-semibold text-foreground">공연장 주소</h2>
         <Link
-          href={`/map?venueId=${venue.id}`}
+          href={`/map?venueId=${venueId}`}
           aria-label="지도에서 공연장 위치 보기"
           className="-my-2.5 flex size-11 items-center justify-end rounded-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-60"
         >
@@ -60,30 +75,30 @@ export function VenueSection({ venue, onCopyAddress }: VenueSectionProps) {
         </Link>
       </div>
 
-      <VenueMiniMap name={venue.name} lat={venue.lat} lng={venue.lng} />
+      <VenueMiniMap
+        name={theatre.name}
+        lat={theatre.latitude}
+        lng={theatre.longitude}
+      />
 
       <dl className="flex flex-col gap-5 text-body2">
         <div className="flex gap-5">
           <dt className="w-13.5 shrink-0 text-hint">주소</dt>
           <dd className="flex flex-col gap-2">
-            <CopyableAddress
-              address={venue.jibunAddress}
-              onCopy={onCopyAddress}
-            />
-            <CopyableAddress
-              address={venue.roadAddress}
-              onCopy={onCopyAddress}
-            />
+            <CopyableAddress address={jibunAddress} onCopy={onCopyAddress} />
+            <CopyableAddress address={theatre.address} onCopy={onCopyAddress} />
           </dd>
         </div>
         <div className="flex gap-5">
           <dt className="w-13.5 shrink-0 text-hint">건물명</dt>
-          <dd className="text-foreground">{venue.name}</dd>
+          <dd className="text-foreground">{buildingName}</dd>
         </div>
-        <div className="flex gap-5">
-          <dt className="w-13.5 shrink-0 text-hint">전화번호</dt>
-          <dd className="text-foreground">{venue.phone}</dd>
-        </div>
+        {theatre.telno && (
+          <div className="flex gap-5">
+            <dt className="w-13.5 shrink-0 text-hint">전화번호</dt>
+            <dd className="text-foreground">{theatre.telno}</dd>
+          </div>
+        )}
       </dl>
     </section>
   );
