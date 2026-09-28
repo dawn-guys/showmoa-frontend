@@ -10,7 +10,10 @@ import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { HeartBurst, useHeartBurst } from "@/shared/components/heart-burst";
 import { usePerformanceDetail } from "@/app/(tabs)/detail/[id]/_hooks/usePerformanceDetail";
 import { useBlockedDetailFields } from "@/app/(tabs)/detail/[id]/_hooks/useBlockedDetailFields";
-import { useToggleWishlist } from "@/app/(tabs)/detail/[id]/_hooks/useToggleWishlist";
+import {
+  useToggleWishlist,
+  WISHLIST_ERROR_MESSAGE,
+} from "@/shared/hooks/useToggleWishlist";
 import {
   formatPerformancePeriod,
   formatPerformanceStateCaption,
@@ -57,7 +60,7 @@ export function DetailScreen({ id }: DetailScreenProps) {
   const { data: detail, isLoading, isError } = usePerformanceDetail(id);
   // 계약에 없는 필드(상세 이미지·지번 주소·건물명·지도 딥링크 id)는 목업으로 채운다.
   const blocked = useBlockedDetailFields();
-  const { toggle, isToggling } = useToggleWishlist(id);
+  const { add, remove, isPending: isToggling } = useToggleWishlist();
   // 좋아요 "추가" 성공 시에만 재생할 하트 버스트.
   const { triggerKey, burst } = useHeartBurst();
 
@@ -105,16 +108,15 @@ export function DetailScreen({ id }: DetailScreenProps) {
       return;
     }
     const wasWished = isWished;
-    toggle(wasWished, {
+    // 이미 찜했으면 취소, 아니면 추가. 공통 훅이 두 요청과 무효화를 함께 맡는다.
+    const mutateWishlist = wasWished ? remove : add;
+    mutateWishlist(detail.id, {
       onSuccess: () => {
         // 좋아요로 "전환"되는 성공에서만 하트 애니메이션을 재생한다.
         if (!wasWished) burst();
       },
       onError: () =>
-        setToast({
-          message: "네트워크 문제가 생겼습니다. 다시 시도해 주세요",
-          variant: "error",
-        }),
+        setToast({ message: WISHLIST_ERROR_MESSAGE, variant: "error" }),
     });
   };
 

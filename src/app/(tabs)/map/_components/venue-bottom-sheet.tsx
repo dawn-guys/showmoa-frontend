@@ -1,7 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { AnimatedToast } from "@/shared/components/toast";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
+import {
+  useToggleWishlist,
+  WISHLIST_ERROR_MESSAGE,
+} from "@/shared/hooks/useToggleWishlist";
 import type { PerformanceResponse } from "@/app/(tabs)/_types";
 import type { TheatreMapResponse } from "@/app/(tabs)/map/_types";
 import { VenuePerformanceItem } from "@/app/(tabs)/map/_components/venue-performance-item";
@@ -14,6 +23,9 @@ const MAX_HEIGHT =
 
 /** 스냅을 트리거하는 최소 드래그 거리(px). 이 이상 끌면 기본↔최대로 전환. */
 const SNAP_THRESHOLD = 16;
+
+/** 찜 실패 토스트가 떠 있는 시간(ms). 다른 화면과 같은 길이로 맞춘다. */
+const TOAST_DURATION_MS = 2500;
 
 interface VenueBottomSheetProps {
   /** 선택된 극장. */
@@ -38,9 +50,24 @@ export function VenueBottomSheet({
   // 두 단계(기본/최대)만 갖는 스냅 상태.
   const [expanded, setExpanded] = useState(false);
 
-  // 찜 토글(POST/DELETE /api/wishlists)은 Todo F·G 범위라 아직 서버에 반영하지
-  // 않는다. 초기 상태는 응답의 isWished를 쓰고, 토글은 화면에서만 유지한다.
-  const [overriddenIds, setOverriddenIds] = useState<Set<number>>(new Set());
+  const router = useRouter();
+  const { isLoggedIn, isLoading: authLoading } = useAuth();
+  // 디테일과 같은 공통 훅. 지도 시트는 추가·취소 둘 다 쓴다.
+  const {
+    add,
+    remove,
+    isError: isToggleError,
+    reset: resetToggle,
+  } = useToggleWishlist();
+  // 비로그인 사용자의 로그인 유도 모달(공통 훅으로 히스토리 미누적).
+  const [loginOpen, setLoginOpen] = useOverlayFlag("login");
+
+  // 찜 실패 토스트는 잠시 후 스스로 사라진다. 뮤테이션 상태를 되돌려 닫는다.
+  useEffect(() => {
+    if (!isToggleError) return;
+    const timer = setTimeout(resetToggle, TOAST_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [isToggleError, resetToggle]);
 
   // 드래그 시작 지점만 담아 두고, 임계값을 넘는 순간 스냅을 확정한다.
   const dragStartY = useRef<number | null>(null);
@@ -82,13 +109,17 @@ export function VenueBottomSheet({
     }
   };
 
-  const toggleLike = (id: number) => {
-    setOverriddenIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleToggleLike = (performance: PerformanceResponse) => {
+    // 세션 확인 중에는 동작하지 않는다.
+    if (authLoading) return;
+    // 비로그인 사용자는 요청 없이 로그인 유도 모달로 분기한다.
+    if (!isLoggedIn) {
+      setLoginOpen(true);
+      return;
+    }
+    // 성공하면 공통 훅이 이 극장의 공연 목록을 무효화해 isWished를 다시 받아온다.
+    const mutateWishlist = performance.isWished ? remove : add;
+    mutateWishlist(performance.id);
   };
 
   return (
@@ -147,16 +178,30 @@ export function VenueBottomSheet({
             <VenuePerformanceItem
               key={performance.id}
               performance={performance}
-              isLiked={
-                overriddenIds.has(performance.id)
-                  ? !performance.isWished
-                  : performance.isWished
-              }
-              onToggleLike={() => toggleLike(performance.id)}
+              isLiked={performance.isWished}
+              onToggleLike={() => handleToggleLike(performance)}
             />
           ))}
         </ul>
       )}
+
+      {/* 찜 실패 토스트. 상단 검색창·검색 실패 토스트와 겹치지 않게 아래로 둔다. */}
+      <AnimatedToast
+        open={isToggleError}
+        message={WISHLIST_ERROR_MESSAGE}
+        variant="error"
+        className="top-[calc(env(safe-area-inset-top)+124px)]"
+      />
+
+      {/* 비로그인 사용자가 하트를 누르면 로그인 유도 모달(디테일과 같은 문구) */}
+      <ConfirmModal
+        open={loginOpen}
+        onOpenChange={setLoginOpen}
+        title="로그인"
+        description="로그인이 필요한 서비스 입니다. 로그인 하시겠습니까?"
+        confirmLabel="로그인 하기"
+        onConfirm={() => router.push("/login")}
+      />
     </section>
   );
 }

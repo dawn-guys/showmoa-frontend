@@ -11,16 +11,16 @@ import {
   type GenreFilterOption,
 } from "@/shared/constants/genre";
 import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
-import { useRemoveWishlist } from "../_hooks/useRemoveWishlist";
+import {
+  useToggleWishlist,
+  WISHLIST_ERROR_MESSAGE,
+} from "@/shared/hooks/useToggleWishlist";
 import { useWishlist } from "../_hooks/useWishlist";
 import { WishlistItem } from "./wishlist-item";
 import { WishlistSearch } from "./wishlist-search";
 
 /** 찜 해제 실패 토스트가 떠 있는 시간(ms). 상세 화면과 같은 길이로 맞춘다. */
 const TOAST_DURATION_MS = 2500;
-
-/** 찜 해제 요청이 실패했을 때의 문구. 상세 화면 좋아요 실패와 같은 문구다. */
-const REMOVE_ERROR = "네트워크 문제가 생겼습니다. 다시 시도해 주세요";
 
 /**
  * 찜-로그인 화면 본문. 좋아요한 공연 목록과 함께 장르 필터(바텀 시트)와
@@ -38,11 +38,12 @@ export function WishlistLikedView() {
     isFetchingNextPage,
     fetchNextPage,
   } = useWishlist();
+  // 찜 목록에는 추가 동선이 없어 공통 훅에서 remove만 꺼내 쓴다.
   const {
-    mutate: removeWishlist,
+    remove: removeWishlist,
     isError: isRemoveError,
     reset: resetRemove,
-  } = useRemoveWishlist();
+  } = useToggleWishlist();
 
   // 적용된 장르 필터. 제목 옆에 현재 상태로 표시된다.
   const [genre, setGenre] = useState<GenreFilterOption>("전체");
@@ -165,7 +166,7 @@ export function WishlistLikedView() {
       {/* 찜 해제 실패 토스트 */}
       <AnimatedToast
         open={isRemoveError}
-        message={REMOVE_ERROR}
+        message={WISHLIST_ERROR_MESSAGE}
         variant="error"
       />
     </div>
