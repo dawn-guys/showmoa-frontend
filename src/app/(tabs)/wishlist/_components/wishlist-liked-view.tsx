@@ -1,58 +1,110 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { HamburgerMenuLinearIcon } from "@solar-icons/react";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
-import type { GenreFilterOption } from "@/shared/constants/genre";
-import type { PerformanceStatus } from "@/app/(tabs)/_types";
-import { useWishlist } from "../_hooks/useWishlist";
-
-// 목록 정렬 우선순위. 낮을수록 위로 온다.
-// 같은 상태 안에서는 원본(최신 추가) 순서를 그대로 유지한다.
-const STATUS_ORDER: Record<PerformanceStatus, number> = {
-  ongoing: 0, // 상영 중
-  upcoming: 1, // 상영 예정
-  ended: 2, // 상영 종료(항상 마지막)
-};
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
+import { LoadingSpinner } from "@/shared/components/loading-spinner";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import {
+  GENRE_API_VALUES,
+  type GenreFilterOption,
+} from "@/shared/constants/genre";
+import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
+import { useRemoveWishlist } from "../_hooks/useRemoveWishlist";
+import { useWishlist } from "../_hooks/useWishlist";
 import { WishlistItem } from "./wishlist-item";
 import { WishlistSearch } from "./wishlist-search";
 
 /**
+ * 바닥에 닿기 전에 미리 불러오는 거리. 스크롤이 목록 끝에서 멈춰 기다리지 않도록
+ * 화면 한 장 정도 앞에서 다음 페이지를 요청한다.
+ */
+const PREFETCH_ROOT_MARGIN = "400px";
+
+/**
+ * 목록 끝의 로딩 영역. 감지 요소와 스피너 자리를 하나로 합쳤다. 조회 중에는
+ * 옵저버를 끊어 같은 페이지를 두 번 요청하지 않는다.
+ */
+function LoadMoreFooter({
+  onIntersect,
+  isFetching,
+}: {
+  onIntersect: () => void;
+  isFetching: boolean;
+}) {
+  const attach = useCallback(
+    (node: HTMLLIElement | null) => {
+      if (!node || isFetching) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) onIntersect();
+        },
+        { rootMargin: PREFETCH_ROOT_MARGIN },
+      );
+      observer.observe(node);
+
+      return () => observer.disconnect();
+    },
+    [onIntersect, isFetching],
+  );
+
+  return (
+    <li
+      ref={attach}
+      // 조회 중이 아닐 때는 숨은 자리라 보조기기 목록에서 감춘다.
+      aria-hidden={isFetching ? undefined : true}
+      className="flex shrink-0 items-center justify-center"
+    >
+      <LoadingSpinner
+        label="좋아요 한 공연 더 불러오는 중"
+        className={isFetching ? undefined : "invisible"}
+      />
+    </li>
+  );
+}
+
+/**
  * 찜-로그인 화면 본문. 좋아요한 공연 목록과 함께 장르 필터(바텀 시트)와
- * 제목 검색을 제공한다. 하트로 목록에서 제외할 수 있고, 종료 공연도 노출한다.
+ * 제목 검색을 제공한다. 하트로 찜을 해제할 수 있고, 종료 공연도 노출한다.
+ *
+ * 목록 순서는 서버가 준 그대로 쓴다(미종료 먼저 · 종료 나중 · 최근 찜순).
+ * 장르와 제목은 서버가 필터 파라미터를 받지 않아 클라이언트에서 거른다.
  */
 export function WishlistLikedView() {
-  const { data, isLoading } = useWishlist();
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useWishlist();
+  const removeWishlist = useRemoveWishlist();
 
   // 적용된 장르 필터. 제목 옆에 현재 상태로 표시된다.
   const [genre, setGenre] = useState<GenreFilterOption>("전체");
-  // 하트로 제외한 공연 id. 목록에서 즉시 감춘다(Phase 1 로컬 상태).
-  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   // 검색으로 확정된 질의어. 돋보기/Enter로 커밋한다.
   const [query, setQuery] = useState("");
 
   // 바텀 시트 열림 상태(공통 훅으로 히스토리 미누적).
   const [filterOpen, setFilterOpen] = useOverlayFlag("filter");
 
-  const liked = useMemo(
-    () => (data ?? []).filter((p) => !removedIds.has(p.id)),
-    [data, removedIds],
-  );
+  const liked = useMemo(() => {
+    const pages = data?.pages.flatMap((page) => page.content) ?? [];
+    // 스크롤 도중 찜 해제로 페이지 경계가 밀리면 같은 공연이 두 번 올 수 있다.
+    // 계약이 공연 id로 프론트가 dedupe하는 것을 전제한다.
+    return [
+      ...new Map(pages.map((item) => [item.performanceId, item])).values(),
+    ];
+  }, [data]);
 
   const filtered = useMemo(
     () =>
       liked
-        .filter((p) => genre === "전체" || p.genre === genre)
-        .filter((p) => query === "" || p.title.includes(query))
-        // 상태 순으로 안정 정렬(종료는 맨 뒤). 같은 상태 내 최신 추가 순 유지.
-        .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
+        .filter(
+          (item) => genre === "전체" || item.genre === GENRE_API_VALUES[genre],
+        )
+        .filter((item) => query === "" || item.name.includes(query)),
     [liked, genre, query],
   );
 
-  const handleRemove = (id: string) => {
-    setRemovedIds((prev) => new Set(prev).add(id));
+  const handleRemove = (performanceId: number) => {
+    removeWishlist.mutate(performanceId);
   };
 
   const isEmpty = !isLoading && liked.length === 0;
@@ -106,11 +158,18 @@ export function WishlistLikedView() {
           <ul className="flex flex-col gap-3.5">
             {filtered.map((performance) => (
               <WishlistItem
-                key={performance.id}
+                key={performance.performanceId}
                 performance={performance}
-                onRemove={() => handleRemove(performance.id)}
+                onRemove={() => handleRemove(performance.performanceId)}
               />
             ))}
+
+            {hasNextPage && (
+              <LoadMoreFooter
+                onIntersect={fetchNextPage}
+                isFetching={isFetchingNextPage}
+              />
+            )}
           </ul>
         )}
       </section>
