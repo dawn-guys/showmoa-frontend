@@ -11,12 +11,17 @@ import type {
   SliceResponseWishlistItemResponse,
   WishlistItemResponse,
 } from "@/app/(tabs)/wishlist/_types";
+import type { WishlistCalendarResponse } from "@/app/(tabs)/calendar/_types";
 import { apiFetch } from "@/shared/lib/api";
 import { hasErrorType, isApiError } from "@/shared/lib/api-error";
 
-/** 찜 요청이 실패했을 때의 토스트 문구(docs/spec/detail.md). */
+/**
+ * 찜 추가·취소 요청이 실패했을 때의 토스트 문구.
+ * docs/spec/common-ui.md "하트 버튼" 4항이 단일 출처이고, 이 훅을 쓰는
+ * 디테일·찜 목록·캘린더·지도가 모두 이 상수를 함께 쓴다.
+ */
 export const WISHLIST_ERROR_MESSAGE =
-  "네트워크 문제가 생겼습니다. 다시 시도해 주세요";
+  "좋아요를 반영하지 못했습니다. 잠시 후 다시 시도해 주세요";
 
 interface ToggleWishlistVariables {
   performanceId: number;
@@ -38,6 +43,7 @@ interface WishlistSnapshot {
   detail: [QueryKey, unknown][];
   theatre: [QueryKey, unknown][];
   wishlist: [QueryKey, unknown][];
+  calendar: [QueryKey, unknown][];
 }
 
 /**
@@ -104,6 +110,7 @@ export function useToggleWishlist() {
       // 진행 중인 재조회가 돌아와 낙관적 값을 덮어쓰지 않도록 먼저 멈춘다.
       await queryClient.cancelQueries({ queryKey: detailKey });
       await queryClient.cancelQueries({ queryKey: ["wishlist"] });
+      await queryClient.cancelQueries({ queryKey: ["calendar"] });
       await queryClient.cancelQueries({
         predicate: ({ queryKey }) => isTheatrePerformancesKey(queryKey),
       });
@@ -111,6 +118,7 @@ export function useToggleWishlist() {
       const snapshot: WishlistSnapshot = {
         detail: queryClient.getQueriesData({ queryKey: detailKey }),
         wishlist: queryClient.getQueriesData({ queryKey: ["wishlist"] }),
+        calendar: queryClient.getQueriesData({ queryKey: ["calendar"] }),
         theatre: queryClient.getQueriesData({
           predicate: ({ queryKey }) => isTheatrePerformancesKey(queryKey),
         }),
@@ -151,6 +159,13 @@ export function useToggleWishlist() {
               }
             : old,
         );
+
+        // 캘린더: 월별 배열에서 바로 빼 날짜 카드와 바텀 시트에서 즉시 사라지게
+        // 한다. 추가는 캘린더에 동선이 없어 다루지 않는다.
+        queryClient.setQueriesData<WishlistCalendarResponse[]>(
+          { queryKey: ["calendar"] },
+          (old) => old?.filter((item) => item.performanceId !== performanceId),
+        );
       }
 
       return snapshot;
@@ -163,6 +178,7 @@ export function useToggleWishlist() {
         snapshot.detail,
         snapshot.theatre,
         snapshot.wishlist,
+        snapshot.calendar,
       ]) {
         for (const [key, data] of group) queryClient.setQueryData(key, data);
       }
@@ -174,7 +190,8 @@ export function useToggleWishlist() {
         queryKey: ["detail", String(performanceId)],
       });
       void queryClient.invalidateQueries({ queryKey: ["wishlist"] });
-      // 캘린더(GET /api/wishlists/calendar). Todo H에서 실제 요청으로 바뀐다.
+      // 캘린더(GET /api/wishlists/calendar). 월별 키 ["calendar", month] 전체가
+      // 이 프리픽스에 걸려 보고 있지 않은 달까지 함께 갱신된다.
       void queryClient.invalidateQueries({ queryKey: ["calendar"] });
       void queryClient.invalidateQueries({
         predicate: ({ queryKey }) => isTheatrePerformancesKey(queryKey),

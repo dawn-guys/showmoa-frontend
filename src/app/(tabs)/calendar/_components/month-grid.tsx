@@ -1,7 +1,7 @@
 "use client";
 
 import { isSameDay } from "date-fns";
-import type { CalendarPerformance } from "../_types";
+import type { WishlistCalendarResponse } from "../_types";
 import { buildMonthMatrix, getPerformancesForDay } from "../_lib/calendar";
 import { CalendarDayCell } from "./calendar-day-cell";
 
@@ -12,8 +12,8 @@ interface MonthGridProps {
   month: number;
   /** 오늘 */
   today: Date;
-  /** 캘린더 공연 목록(제외 반영). */
-  performances: CalendarPerformance[];
+  /** 이 달의 찜 공연 목록. 날짜별 목록은 셀에서 파생한다. */
+  performances: WishlistCalendarResponse[];
   /** 날짜 카드 선택 콜백. 해당 날짜의 공연 바텀 시트를 연다. */
   onSelectDay: (date: Date) => void;
 }

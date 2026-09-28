@@ -3,7 +3,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { ChevronDown } from "lucide-react";
 import { cn } from "cn";
-import type { CalendarPerformance } from "../_types";
+import type { WishlistCalendarResponse } from "../_types";
 import { CalendarPerformanceItem } from "./calendar-performance-item";
 
 interface DayPerformanceSheetProps {
@@ -13,10 +13,10 @@ interface DayPerformanceSheetProps {
   onOpenChange: (open: boolean) => void;
   /** 선택된 날짜. 열려 있을 때만 유효하다. */
   date: Date | null;
-  /** 선택된 날짜의 공연 목록(이미 제외 반영). */
-  performances: CalendarPerformance[];
-  /** 하트로 공연을 캘린더(찜)에서 제외한다. */
-  onRemove: (id: string) => void;
+  /** 선택된 날짜의 공연 목록 */
+  performances: WishlistCalendarResponse[];
+  /** 하트로 공연의 찜을 해제한다. */
+  onRemove: (performanceId: number) => void;
 }
 
 /**
@@ -71,10 +71,9 @@ export function DayPerformanceSheet({
             <ul className="flex min-h-0 flex-1 [scrollbar-width:none] flex-col gap-[30px] overflow-y-auto overscroll-contain px-4 pt-1 pb-[calc(2rem+env(safe-area-inset-bottom))] [&::-webkit-scrollbar]:hidden">
               {performances.map((performance) => (
                 <CalendarPerformanceItem
-                  key={performance.id}
+                  key={performance.performanceId}
                   performance={performance}
-                  isLiked
-                  onToggleLike={() => onRemove(performance.id)}
+                  onRemove={() => onRemove(performance.performanceId)}
                 />
               ))}
             </ul>
