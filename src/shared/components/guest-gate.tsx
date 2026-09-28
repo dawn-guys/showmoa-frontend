@@ -20,7 +20,7 @@ export function GuestGate({ srHeading }: GuestGateProps) {
       <h1 className="sr-only">{srHeading}</h1>
       <Link
         href="/login"
-        className="rounded bg-primary px-3 py-2.5 text-body1 font-semibold text-primary-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-90"
+        className="rounded bg-primary px-3 py-2.5 text-body1 font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-90"
       >
         로그인 하러 가기
       </Link>
