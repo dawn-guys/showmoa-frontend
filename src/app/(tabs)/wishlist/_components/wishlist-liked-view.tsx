@@ -60,7 +60,9 @@ export function WishlistLikedView() {
   }, [isRemoveError, resetRemove]);
 
   const liked = useMemo(() => {
-    const pages = data?.pages.flatMap((page) => page.content) ?? [];
+    // content가 없는 응답(계약과 다른 모양)이 오면 그 페이지는 비운다. 이 가드가
+    // 없으면 flatMap이 undefined를 원소로 남겨 아래 map에서 페이지가 통째로 죽는다.
+    const pages = data?.pages.flatMap((page) => page.content ?? []) ?? [];
     // 스크롤 도중 찜 해제로 페이지 경계가 밀리면 같은 공연이 두 번 올 수 있다.
     // 계약이 공연 id로 프론트가 dedupe하는 것을 전제한다.
     return [
