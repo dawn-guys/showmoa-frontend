@@ -1,6 +1,6 @@
 "use client";
 
-import type { CalendarPerformance } from "../_types";
+import type { WishlistCalendarResponse } from "../_types";
 import { getPerformancesForDay, getWeekDays } from "../_lib/calendar";
 import { WeekdayHeader } from "./weekday-header";
 import { CalendarPerformanceItem } from "./calendar-performance-item";
@@ -12,10 +12,10 @@ interface WeekViewProps {
   selectedDate: Date;
   /** 요일 선택 콜백 */
   onSelectDate: (date: Date) => void;
-  /** 캘린더 공연 목록(제외 반영). */
-  performances: CalendarPerformance[];
-  /** 하트로 공연을 캘린더(찜)에서 제외한다. */
-  onRemove: (id: string) => void;
+  /** 이 달의 찜 공연 목록. 선택한 요일의 목록은 여기서 파생한다. */
+  performances: WishlistCalendarResponse[];
+  /** 하트로 공연의 찜을 해제한다. */
+  onRemove: (performanceId: number) => void;
 }
 
 /**
@@ -53,10 +53,9 @@ export function WeekView({
           <ul className="flex min-h-0 flex-1 [scrollbar-width:none] flex-col gap-[30px] overflow-y-auto overscroll-contain pt-1 pb-4 [&::-webkit-scrollbar]:hidden">
             {dayPerformances.map((performance) => (
               <CalendarPerformanceItem
-                key={performance.id}
+                key={performance.performanceId}
                 performance={performance}
-                isLiked
-                onToggleLike={() => onRemove(performance.id)}
+                onRemove={() => onRemove(performance.performanceId)}
               />
             ))}
           </ul>
