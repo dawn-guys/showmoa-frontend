@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { HamburgerMenuLinearIcon } from "@solar-icons/react";
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
-import { LoadingSpinner } from "@/shared/components/loading-spinner";
+import { LoadMoreFooter } from "@/shared/components/load-more-footer";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
   GENRE_API_VALUES,
@@ -14,55 +14,6 @@ import { useRemoveWishlist } from "../_hooks/useRemoveWishlist";
 import { useWishlist } from "../_hooks/useWishlist";
 import { WishlistItem } from "./wishlist-item";
 import { WishlistSearch } from "./wishlist-search";
-
-/**
- * 바닥에 닿기 전에 미리 불러오는 거리. 스크롤이 목록 끝에서 멈춰 기다리지 않도록
- * 화면 한 장 정도 앞에서 다음 페이지를 요청한다.
- */
-const PREFETCH_ROOT_MARGIN = "400px";
-
-/**
- * 목록 끝의 로딩 영역. 감지 요소와 스피너 자리를 하나로 합쳤다. 조회 중에는
- * 옵저버를 끊어 같은 페이지를 두 번 요청하지 않는다.
- */
-function LoadMoreFooter({
-  onIntersect,
-  isFetching,
-}: {
-  onIntersect: () => void;
-  isFetching: boolean;
-}) {
-  const attach = useCallback(
-    (node: HTMLLIElement | null) => {
-      if (!node || isFetching) return;
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          if (entries.some((entry) => entry.isIntersecting)) onIntersect();
-        },
-        { rootMargin: PREFETCH_ROOT_MARGIN },
-      );
-      observer.observe(node);
-
-      return () => observer.disconnect();
-    },
-    [onIntersect, isFetching],
-  );
-
-  return (
-    <li
-      ref={attach}
-      // 조회 중이 아닐 때는 숨은 자리라 보조기기 목록에서 감춘다.
-      aria-hidden={isFetching ? undefined : true}
-      className="flex shrink-0 items-center justify-center"
-    >
-      <LoadingSpinner
-        label="좋아요 한 공연 더 불러오는 중"
-        className={isFetching ? undefined : "invisible"}
-      />
-    </li>
-  );
-}
 
 /**
  * 찜-로그인 화면 본문. 좋아요한 공연 목록과 함께 장르 필터(바텀 시트)와
@@ -168,6 +119,7 @@ export function WishlistLikedView() {
               <LoadMoreFooter
                 onIntersect={fetchNextPage}
                 isFetching={isFetchingNextPage}
+                label="좋아요 한 공연 더 불러오는 중"
               />
             )}
           </ul>
