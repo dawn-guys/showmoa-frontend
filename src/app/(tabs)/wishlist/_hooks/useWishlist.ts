@@ -39,6 +39,7 @@ export function useWishlist() {
     // 세션 확인 중에는 쿼리가 꺼져 있어 isLoading이 false다. 그대로 두면 빈 상태
     // 문구가 잠깐 보이므로, 확인이 끝날 때까지 로딩(스켈레톤)으로 본다.
     isLoading: isSessionLoading || query.isLoading,
+    isError: query.isError,
     hasNextPage: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     fetchNextPage: query.fetchNextPage,
