@@ -1,16 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/shared/components/ui/badge";
-import type { GenreCategory } from "@/shared/constants/genre";
 
 interface PerformanceCardProps {
   id: number;
   title: string;
   /**
-   * 장르 카테고리. 찜 목록 응답(WishlistResponse)에는 장르가 없어
-   * 넘기지 않을 수 있고, 없으면 장르 태그를 숨긴다.
+   * 장르. 응답 값(연극·뮤지컬·콘서트·클래식·국악·기타)을 그대로 노출한다.
+   * 찜 캘린더 응답처럼 장르가 없는 항목도 있어, 없으면 태그를 숨긴다.
    */
-  genre?: GenreCategory;
+  genre?: string;
   /** 포스터 이미지 URL. 없으면 플레이스홀더가 노출된다. */
   posterUrl?: string;
   /** 진행 상태 뱃지 문구(예: "공연 중"). 없으면 뱃지를 숨긴다. */

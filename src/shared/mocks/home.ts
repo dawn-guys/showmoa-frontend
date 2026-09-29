@@ -1,24 +1,8 @@
 // Provisional: based on screen spec, not the API contract.
-import type {
-  FeaturedPerformance,
-  PerformanceSummary,
-} from "@/app/(tabs)/_types";
+import type { PerformanceSummary } from "@/app/(tabs)/_types";
 
 // MOCK: 실제 포스터 에셋 연동 전까지 사용하는 자리표시 이미지(picsum, 세로형).
 const poster = (seed: string) => `https://picsum.photos/seed/${seed}/600/800`;
-
-// MOCK: 주목받는 공연 1개. Phase 2에서 실제 추천 공연으로 교체한다.
-export const MOCK_FEATURED_PERFORMANCE: FeaturedPerformance = {
-  id: "featured-1",
-  title: "그림으로 그리는 춤과 예술의 경계",
-  posterUrl: poster("featured-1"),
-  genre: "기타",
-  venue: "서울 타워 펠리스 3층 세미나관",
-  startDate: "2026-09-10T19:30:00+09:00",
-  endDate: "2026-10-10T21:00:00+09:00",
-  status: "ongoing",
-  likeCount: 690,
-};
 
 // MOCK: 인기 순위 후보 공연들. 순위는 usePopularRanking에서 likeCount로 산정한다.
 //  - popular-2는 긴 제목(말줄임) 엣지 케이스.
@@ -190,7 +174,6 @@ export const MOCK_CATEGORY_PERFORMANCES: PerformanceSummary[] = [
 
 // MOCK: 전체 공연 풀. 인기 순위는 이 목록에서 likeCount 기준으로 산정한다.
 export const MOCK_ALL_PERFORMANCES: PerformanceSummary[] = [
-  MOCK_FEATURED_PERFORMANCE,
   ...MOCK_POPULAR_CANDIDATES,
   ...MOCK_CATEGORY_PERFORMANCES,
 ];

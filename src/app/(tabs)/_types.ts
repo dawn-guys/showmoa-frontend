@@ -1,5 +1,5 @@
 // Contract: PerformanceListResponse, PagePerformanceListResponse, AreaResponse,
-// WishlistResponse (v3/api-docs)
+// TheatreInfo, PerformanceResponse, TicketingSiteInfo (v3/api-docs)
 import type { GenreCategory } from "@/shared/constants/genre";
 
 /**
@@ -130,40 +130,6 @@ export interface TicketingSiteInfo {
   url: string;
 }
 
-/** 찜한 공연의 진행 상태. 계약에 열거값으로 선언돼 있다. */
-export type WishlistStatus = "UPCOMING" | "ONGOING" | "ENDED";
-
-/**
- * GET /api/wishlists 응답 원소(찜한 공연). 공연 시작일 오름차순으로 내려온다.
- * 목록에 genre가 없어 카드의 장르 태그는 이 응답으로 채울 수 없다.
- */
-export interface WishlistResponse {
-  performanceId: number;
-  name: string;
-  posterUrl: string;
-  status: WishlistStatus;
-  theatreName: string;
-  /** 공연 시작일 yyyy-MM-dd */
-  startDate: string;
-  /** 공연 종료일 yyyy-MM-dd */
-  endDate: string;
-}
-
-/**
- * GET /api/wishlists 쿼리 파라미터. 둘 다 없으면 전체, month는 해당 월과
- * 겹치는 공연, date는 그 날짜가 공연 기간에 포함되는 공연이다.
- * month와 date를 함께 보내면 400이다.
- *
- * apiFetch의 QueryParams가 요구하는 암시적 인덱스 시그니처 때문에
- * interface가 아니라 type으로 둔다.
- */
-export type WishlistParams = {
-  /** yyyy-MM */
-  month?: string;
-  /** yyyy-MM-dd */
-  date?: string;
-};
-
 // Provisional: based on screen spec, not the API contract.
 
 /** 공연 진행 상태. 날짜에서 파생되지만 목업 편의를 위해 명시한다. */
@@ -192,9 +158,6 @@ export interface PerformanceSummary {
   /** 좋아요(찜) 수. 인기 순위 산정 기준. */
   likeCount: number;
 }
-
-/** 주목받는 공연 (홈 상단 배너 1개) */
-export type FeaturedPerformance = PerformanceSummary;
 
 /** 인기 공연 순위 항목 */
 export interface RankedPerformance extends PerformanceSummary {
