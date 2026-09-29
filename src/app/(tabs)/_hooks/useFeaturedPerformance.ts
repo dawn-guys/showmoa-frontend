@@ -3,7 +3,6 @@ import type {
   PagePerformanceListResponse,
   PerformanceListResponse,
 } from "@/app/(tabs)/_types";
-import { STATE_ENDED } from "@/app/(tabs)/_lib/performance-status";
 import { apiFetch } from "@/shared/lib/api";
 
 /**
@@ -25,7 +24,7 @@ function pickFeatured(
   page: PagePerformanceListResponse,
 ): PerformanceListResponse | null {
   const candidates = page.content.filter(
-    (performance) => performance.state !== STATE_ENDED,
+    (performance) => performance.state !== "ENDED",
   );
   if (candidates.length === 0) return null;
 

@@ -1,19 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_ALL_PERFORMANCES } from "@/shared/mocks/home";
-import type { RankedPerformance } from "../_types";
+import type { PerformanceListResponse } from "@/app/(tabs)/_types";
+import { apiFetch } from "@/shared/lib/api";
 
-/** 전체 공연에서 좋아요(likeCount) 많은 순으로 상위 5개를 순위와 함께 조회한다. */
+/**
+ * 인기 있는 공연 순위를 조회한다(GET /api/performances/popular).
+ *
+ * 찜 개수 내림차순, 동점이면 시작일이 빠른 순으로 서버가 정렬해 내려주므로
+ * 클라이언트에서 다시 정렬하지 않는다. 응답에 순위 필드가 없어 배열 순서가
+ * 곧 순위다(표시는 화면에서 index + 1).
+ *
+ * 파라미터는 없고 개수도 서버가 상위 5개로 고정한다. 종료된 공연은 빠지고,
+ * 찜이 한 번도 없는 공연은 애초에 후보가 아니라 아무도 찜하지 않았으면
+ * 빈 배열이 온다.
+ */
 export function usePopularRanking() {
   return useQuery({
     queryKey: ["home", "popular-ranking"],
-    // MOCK: Phase 2에서 queryFn를 실제 인기 순위 요청으로 교체한다.
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const ranked: RankedPerformance[] = [...MOCK_ALL_PERFORMANCES]
-        .sort((a, b) => b.likeCount - a.likeCount)
-        .slice(0, 5)
-        .map((performance, index) => ({ ...performance, rank: index + 1 }));
-      return ranked;
-    },
+    queryFn: ({ signal }) =>
+      apiFetch<PerformanceListResponse[]>("/api/performances/popular", {
+        signal,
+      }),
   });
 }

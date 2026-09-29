@@ -1,9 +1,16 @@
 // Contract: PerformanceListResponse, PagePerformanceListResponse, AreaResponse,
 // TheatreInfo, PerformanceResponse, TicketingSiteInfo (v3/api-docs)
-import type { GenreCategory } from "@/shared/constants/genre";
 
 /**
- * 공연 목록 항목. GET /api/performances/search 응답 content의 원소다.
+ * 공연 진행 상태. 백엔드가 저장값이 아니라 오늘(Asia/Seoul)과 공연 기간을
+ * 비교해 계산해서 내려준다. 적재 시점 값인 KOPIS 원문 state는 시간이 지나면
+ * 실제와 어긋나서, 계약이 이 열거값으로 바뀌었다.
+ */
+export type PerformanceStatus = "UPCOMING" | "ONGOING" | "ENDED";
+
+/**
+ * 공연 목록 항목. GET /api/performances, /api/performances/search,
+ * /api/performances/popular 가 같은 스키마를 쓴다.
  * 날짜는 yyyy-MM-dd(시각·오프셋 없음).
  */
 export interface PerformanceListResponse {
@@ -15,12 +22,14 @@ export interface PerformanceListResponse {
    * 백엔드 시드 데이터에 genre가 null인 항목이 있어 nullable이다.
    */
   genre: string | null;
-  /** 공연 상태(공연예정·공연중·공연완료) */
-  state: string;
+  state: PerformanceStatus;
   /** 공연 시작일 yyyy-MM-dd */
   startDate: string;
   /** 공연 종료일 yyyy-MM-dd */
   endDate: string;
+  /** 오픈런 여부. true면 endDate가 있어도 종료일을 확정 표기하지 않는다. */
+  openRun: boolean;
+  theatre: TheatreInfo;
 }
 
 /**
@@ -106,12 +115,15 @@ export interface PerformanceResponse {
   posterUrl: string;
   /** 통합 장르 값(연극·뮤지컬·콘서트·클래식·국악·기타) */
   genre: string;
-  /** 공연 상태(공연예정·공연중·공연완료) */
-  state: string;
+  state: PerformanceStatus;
   /** 공연 시작일 yyyy-MM-dd */
   startDate: string;
   /** 공연 종료일 yyyy-MM-dd */
   endDate: string;
+  /** 오픈런 여부. true면 endDate가 있어도 종료일을 확정 표기하지 않는다. */
+  openRun: boolean;
+  /** 공연 소개 이미지 URL 목록. 없으면 빈 배열이다. */
+  introImageUrls: string[];
   /** 상영 시간 자유 문구(예: "화요일(19:00)") */
   showTimeGuidance: string;
   /** 관람 연령(예: "만 7세 이상"). 표기가 없는 공연이 있다. */
@@ -128,39 +140,4 @@ export interface PerformanceResponse {
 export interface TicketingSiteInfo {
   name: string;
   url: string;
-}
-
-// Provisional: based on screen spec, not the API contract.
-
-/** 공연 진행 상태. 날짜에서 파생되지만 목업 편의를 위해 명시한다. */
-export type PerformanceStatus = "upcoming" | "ongoing" | "ended";
-
-/**
- * 홈의 카드·리스트가 공통으로 사용하는 공연 요약 정보.
- * docs/spec/home.md에 언급된 필드(제목·공연장 위치·장르·포스터)와
- * 목업 엣지 케이스(오픈런·공연 종료) 표현에 필요한 날짜/상태로 구성한다.
- */
-export interface PerformanceSummary {
-  id: string;
-  /** 공연 제목 */
-  title: string;
-  /** 포스터 이미지 URL */
-  posterUrl: string;
-  /** 장르 카테고리 */
-  genre: GenreCategory;
-  /** 공연장 위치 */
-  venue: string;
-  /** 공연 시작일 (ISO 8601) */
-  startDate: string;
-  /** 공연 종료일 (ISO 8601). 오픈런이면 null */
-  endDate: string | null;
-  status: PerformanceStatus;
-  /** 좋아요(찜) 수. 인기 순위 산정 기준. */
-  likeCount: number;
-}
-
-/** 인기 공연 순위 항목 */
-export interface RankedPerformance extends PerformanceSummary {
-  /** 1부터 시작하는 순위 */
-  rank: number;
 }
