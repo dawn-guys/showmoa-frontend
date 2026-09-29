@@ -4,21 +4,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "cn";
 import { HeartButton } from "@/shared/components/heart-button";
-import type {
-  PerformanceStatus,
-  PerformanceSummary,
-} from "@/app/(tabs)/_types";
+import type { WishlistItemResponse, WishlistStatus } from "../_types";
 
 // 찜 목록의 상태 문구. Figma 표기를 그대로 사용한다("상영"·"상연" 혼용).
-const STATUS_LABEL: Record<PerformanceStatus, string> = {
-  ongoing: "상영 중",
-  upcoming: "상영 예정",
-  ended: "상연 종료",
+const STATUS_LABEL: Record<WishlistStatus, string> = {
+  ONGOING: "상영 중",
+  UPCOMING: "상영 예정",
+  ENDED: "상연 종료",
 };
 
 interface WishlistItemProps {
-  performance: PerformanceSummary;
-  /** 하트 버튼을 눌러 찜 목록에서 제외한다. */
+  performance: WishlistItemResponse;
+  /** 하트 버튼을 눌러 찜을 해제한다. */
   onRemove: () => void;
 }
 
@@ -29,8 +26,8 @@ interface WishlistItemProps {
  * <ul> 안에서 사용한다.
  */
 export function WishlistItem({ performance, onRemove }: WishlistItemProps) {
-  const { id, title, posterUrl, status } = performance;
-  const isEnded = status === "ended";
+  const { performanceId, name, posterUrl, status } = performance;
+  const isEnded = status === "ENDED";
 
   const poster = (
     <span className="relative size-[50px] shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -56,7 +53,7 @@ export function WishlistItem({ performance, onRemove }: WishlistItemProps) {
           isEnded ? "text-disabled" : "text-foreground",
         )}
       >
-        {title}
+        {name}
       </span>
       <span
         className={cn(
@@ -79,7 +76,7 @@ export function WishlistItem({ performance, onRemove }: WishlistItemProps) {
         </div>
       ) : (
         <Link
-          href={`/detail/${id}`}
+          href={`/detail/${performanceId}`}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {poster}

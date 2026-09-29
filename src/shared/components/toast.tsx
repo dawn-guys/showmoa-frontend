@@ -34,7 +34,7 @@ export function Toast({ message, variant = "default", className }: ToastProps) {
         // max-w-full로 넘침을 막고 줄바꿈된다. 가운데 정렬은 사용하는 쪽에서 처리.
         // text-[0.75rem]은 커스텀 text-body3와 달리 tailwind-merge가 폰트사이즈로 인식해
         // VARIANT_TEXT의 text-* 색상과 충돌 없이 유지된다.
-        "inline-flex max-w-full items-center justify-center rounded bg-white px-3.5 py-2 text-center text-[0.75rem] font-normal",
+        "inline-flex max-w-full items-center justify-center rounded bg-white px-3.5 py-2 text-center text-[0.75rem] font-normal shadow-[0_0_4px_0_rgba(0,0,0,0.25)]",
         VARIANT_TEXT[variant],
         className,
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { parseAsString, useQueryState } from "nuqs";
@@ -10,8 +10,13 @@ import {
   useOverlayFlag,
 } from "@/shared/hooks/useOverlayFlag";
 import { GuestGate } from "@/shared/components/guest-gate";
+import { AnimatedToast } from "@/shared/components/toast";
+import {
+  useToggleWishlist,
+  WISHLIST_ERROR_MESSAGE,
+} from "@/shared/hooks/useToggleWishlist";
 import type { CalendarViewMode } from "../_types";
-import { getPerformancesForDay } from "../_lib/calendar";
+import { getPerformancesForDay, toMonthParam } from "../_lib/calendar";
 import { useCalendar } from "../_hooks/useCalendar";
 import { CalendarTitleBar } from "./calendar-title-bar";
 import { WeekdayHeader } from "./weekday-header";
@@ -25,10 +30,11 @@ import { DayPerformanceSheet } from "./day-performance-sheet";
 const CONTENT_HEIGHT =
   "h-[calc(100dvh-5rem-var(--spacing-bottom-nav)-env(safe-area-inset-bottom))]";
 
+/** 찜 해제 실패 토스트가 떠 있는 시간(ms). 찜 목록·상세와 같은 길이로 맞춘다. */
+const TOAST_DURATION_MS = 2500;
+
 /** 로그인 캘린더 본문. 월간/주간 전환, 월 선택, 날짜별 공연 시트를 다룬다. */
 function CalendarLoggedIn() {
-  const { data, isLoading } = useCalendar();
-
   // 오늘(마운트 시점 고정). 오늘 강조·금주 계산의 기준이다.
   const today = useMemo(() => new Date(), []);
 
@@ -37,8 +43,6 @@ function CalendarLoggedIn() {
   const year = today.getFullYear();
   const [month, setMonth] = useState(today.getMonth());
   const [selectedWeekDate, setSelectedWeekDate] = useState<Date>(today);
-  // 하트로 캘린더(찜)에서 제외한 공연 id. 달력·목록에서 즉시 감춘다.
-  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
   // 오버레이 열림 상태는 URL에 저장하되, 히스토리에는 쌓지 않는다(공통 옵션).
   const [pickerOpen, setPickerOpen] = useOverlayFlag("picker");
@@ -48,14 +52,28 @@ function CalendarLoggedIn() {
     parseAsString.withOptions(overlayUrlOptions),
   );
 
-  const performances = useMemo(
-    () => (data ?? []).filter((p) => !removedIds.has(p.id)),
-    [data, removedIds],
+  // 조회할 달. 주간 뷰는 선택한 요일이 기준이다. 한 주가 두 달에 걸칠 때
+  // (예: 9/28~10/4) 선택한 날이 속한 달을 받아야 그 날의 공연이 빠지지 않는다.
+  const monthParam = toMonthParam(
+    viewMode === "week" ? selectedWeekDate : new Date(year, month, 1),
   );
+  const { data, isLoading, isError } = useCalendar(monthParam);
 
-  const handleRemove = (id: string) => {
-    setRemovedIds((prev) => new Set(prev).add(id));
-  };
+  // 캘린더에는 찜을 추가하는 동선이 없어 공통 훅에서 remove만 꺼내 쓴다.
+  const {
+    remove: removeWishlist,
+    isError: isRemoveError,
+    reset: resetRemove,
+  } = useToggleWishlist();
+
+  // 실패 토스트는 잠시 후 스스로 사라진다. 뮤테이션 상태를 되돌려 닫는다.
+  useEffect(() => {
+    if (!isRemoveError) return;
+    const timer = setTimeout(resetRemove, TOAST_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [isRemoveError, resetRemove]);
+
+  const performances = data ?? [];
 
   // 제목 기준 날짜: 주간은 오늘, 월간은 당월이면 오늘 아니면 해당 월 1일.
   const isCurrentMonth =
@@ -97,6 +115,14 @@ function CalendarLoggedIn() {
           <WeekdayHeader today={today} />
           <CalendarSkeleton />
         </>
+      ) : isError ? (
+        // 조회 실패: 달력 자리에 안내 문구를 둔다(docs/spec/calendar.md 7항).
+        <p
+          role="alert"
+          className="text-4.5 m-auto text-center text-muted-foreground"
+        >
+          공연 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요
+        </p>
       ) : viewMode === "month" ? (
         <>
           <WeekdayHeader today={today} />
@@ -114,7 +140,7 @@ function CalendarLoggedIn() {
           selectedDate={selectedWeekDate}
           onSelectDate={setSelectedWeekDate}
           performances={performances}
-          onRemove={handleRemove}
+          onRemove={removeWishlist}
         />
       )}
 
@@ -131,7 +157,14 @@ function CalendarLoggedIn() {
         }}
         date={selectedDay}
         performances={selectedDayPerformances}
-        onRemove={handleRemove}
+        onRemove={removeWishlist}
+      />
+
+      {/* 찜 해제 실패 토스트 */}
+      <AnimatedToast
+        open={isRemoveError}
+        message={WISHLIST_ERROR_MESSAGE}
+        variant="error"
       />
     </div>
   );

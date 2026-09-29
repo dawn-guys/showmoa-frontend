@@ -28,11 +28,15 @@ function refreshMaxAgeSeconds(): number {
     : DEFAULT_REFRESH_MAX_AGE_SECONDS;
 }
 
+/**
+ * 배포된 개발 백엔드. BACKEND_API_URL을 설정하지 않으면 이 주소를 쓴다.
+ * 로컬 백엔드(http://localhost:8080)를 띄워 붙일 때만 env로 덮어쓰면 된다.
+ */
+export const DEFAULT_BACKEND_API_URL = "https://showmoa-dev.duckdns.org";
+
 function backendBaseUrl(): string {
-  const baseUrl = process.env.BACKEND_API_URL;
-  if (!baseUrl) {
-    throw new Error("BACKEND_API_URL 환경 변수가 설정되지 않았습니다.");
-  }
+  const baseUrl = process.env.BACKEND_API_URL || DEFAULT_BACKEND_API_URL;
+  // 끝의 슬래시를 떼어 경로를 붙일 때 //가 생기지 않게 한다.
   return baseUrl.replace(/\/$/, "");
 }
 

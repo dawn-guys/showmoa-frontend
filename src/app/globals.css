@@ -55,8 +55,9 @@
 
 @theme {
   /* LoadingSpinner: 안쪽에서 바깥으로 퍼지며 사라지는 파동 애니메이션.
-     both: 딜레이 구간에도 0% 상태(작은 점)를 유지해 시작 순간 큰 원이 보이지 않게 한다. */
-  --animate-wave: wave 1200ms linear infinite both;
+     위상 오프셋은 각 원에 음수 딜레이로 주어, 시작 순간부터 파동이 중간 과정에서
+     보이게 한다(LoadingSpinner 참고). */
+  --animate-wave: wave 1200ms linear infinite;
 
   @keyframes wave {
     0% {

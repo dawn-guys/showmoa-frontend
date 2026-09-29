@@ -2,7 +2,8 @@
 
 import { format } from "date-fns";
 import { cn } from "cn";
-import type { CalendarPerformance } from "../_types";
+import type { WishlistCalendarResponse } from "../_types";
+import { getPerformanceColor } from "../_lib/calendar";
 
 interface CalendarDayCellProps {
   date: Date;
@@ -11,7 +12,7 @@ interface CalendarDayCellProps {
   /** 오늘인지. 날짜 숫자를 주조색으로 강조한다. */
   isToday: boolean;
   /** 이 날짜에 열리는 공연 목록 */
-  performances: CalendarPerformance[];
+  performances: WishlistCalendarResponse[];
   /** 셀을 눌렀을 때(당월 날짜만). 해당 날짜의 공연 바텀 시트를 연다. */
   onSelect: (date: Date) => void;
 }
@@ -20,20 +21,20 @@ interface CalendarDayCellProps {
 function PerformanceChip({
   performance,
 }: {
-  performance: CalendarPerformance;
+  performance: WishlistCalendarResponse;
 }) {
   return (
     <span
       className="flex h-4 shrink-0 items-center border-l-2 pl-1"
-      style={{ borderColor: performance.color }}
+      style={{ borderColor: getPerformanceColor(performance.performanceId) }}
     >
       {/* 색상은 보조 수단이므로 제목 텍스트는 항상 읽히게 두고, 잘린 제목의
           전체값은 title 속성으로 보조기기에 전달한다. */}
       <span
         className="truncate text-body4 text-foreground"
-        title={performance.title}
+        title={performance.name}
       >
-        {performance.title}
+        {performance.name}
       </span>
     </span>
   );
@@ -44,7 +45,7 @@ function DayCard({
   performances,
   dimmed,
 }: {
-  performances: CalendarPerformance[];
+  performances: WishlistCalendarResponse[];
   dimmed?: boolean;
 }) {
   return (
@@ -56,7 +57,9 @@ function DayCard({
     >
       {/* 칩을 모두 렌더하고, 카드 높이를 넘치면 overflow-hidden으로 잘라 숨긴다. */}
       {!dimmed &&
-        performances.map((p) => <PerformanceChip key={p.id} performance={p} />)}
+        performances.map((p) => (
+          <PerformanceChip key={p.performanceId} performance={p} />
+        ))}
     </span>
   );
 }

@@ -6,6 +6,7 @@ import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { LegalDrawer } from "@/shared/components/legal-drawer";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useLogout } from "@/shared/hooks/useLogout";
 import {
   overlayUrlOptions,
   useOverlayFlag,
@@ -27,9 +28,15 @@ export function SettingList() {
 
   // 헤더와 동일하게 useAuth로 로그인 여부를 판별한다(세션 확인 중 깜빡임 방지).
   const { user, isLoggedIn, isLoading } = useAuth();
+  const { logout } = useLogout();
 
-  const handleLogout = () => {
-    // MOCK: 실제 로그아웃(세션·토큰 해제)은 API 연동 시 구현. 지금은 홈으로 이동한다.
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // 요청이 실패해도 라우트 핸들러가 쿠키를 지우고, 훅이 사용자 쿼리를 비운다.
+      // 로그아웃을 못 하는 상태에 갇히지 않도록 그대로 홈으로 보낸다.
+    }
     router.push("/");
   };
 

@@ -2,7 +2,7 @@ import { LoadingSpinner } from "@/shared/components/loading-spinner";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
 /** 바텀 시트 위쪽(지도가 보이는) 영역의 하단 경계. 시트 높이 + 나브 + 안전영역. */
-const MAP_SECTION_BOTTOM =
+export const MAP_SECTION_BOTTOM =
   "calc(var(--spacing-venue-sheet) + var(--spacing-bottom-nav) + env(safe-area-inset-bottom))";
 
 /**
@@ -17,13 +17,15 @@ export function MapSkeleton() {
       aria-label="지도를 불러오는 중"
       className="absolute inset-0"
     >
-      {/* 지도 로딩 표시: 바텀 시트를 제외한 지도 영역의 가로·세로 중앙 */}
+      {/* 지도 로딩 표시: 바텀 시트를 제외한 지도 영역의 가로·세로 중앙에서 20px 위.
+          재조회 스피너(map-screen)와 같은 위치라 첫 로드 → 재조회로 이어져도 튀지 않는다.
+          검색 로딩처럼 실제 지도 위에 얹힐 때는 지도를 가리도록 앱 배경색으로 덮는다. */}
       <div
         aria-hidden
         style={{ bottom: MAP_SECTION_BOTTOM }}
-        className="absolute inset-x-0 top-0 flex items-center justify-center"
+        className="absolute inset-x-0 top-0 flex items-center justify-center bg-[#f6f6f6]"
       >
-        <LoadingSpinner />
+        <LoadingSpinner className="-translate-y-5" />
       </div>
 
       {/* 바텀 시트 스켈레톤: VenueBottomSheet와 동일한 컨테이너·간격 */}
