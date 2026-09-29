@@ -9,6 +9,7 @@ import {
   NAVER_MAP_CLIENT_ID,
   venueMarkerAnchor,
 } from "@/app/(tabs)/map/_lib/naver-map";
+import { NaverMapScript } from "@/app/(tabs)/map/_components/naver-map-script";
 
 interface VenueMiniMapProps {
   /** 공연장 이름(마커 표시용) */
@@ -17,33 +18,30 @@ interface VenueMiniMapProps {
   lng: number;
 }
 
+/** 지도를 그릴 수 없을 때(키 없음·로드 실패) 자리를 채우는 표시. */
+function MiniMapPlaceholder() {
+  return (
+    <div className="flex h-[150px] w-full items-center justify-center gap-1.5 rounded-md bg-muted text-body3 text-muted-foreground">
+      <MapPointLineDuotoneIcon size={18} aria-hidden />
+      지도를 표시할 수 없습니다
+    </div>
+  );
+}
+
 /**
- * 공연장 위치를 간략히 보여주는 정적 미니 지도. (tabs) 셸에서 로드한 네이버 지도
- * SDK가 준비되면 단일 마커 지도를 만든다. 사용자 조작은 막아(간략 표시) 스크롤을
- * 방해하지 않는다. 키가 없으면 플레이스홀더를 노출한다(docs/spec 지도 정책).
+ * 공연장 위치를 간략히 보여주는 정적 미니 지도. 네이버 지도 SDK를 이 화면에서
+ * 직접 로드하므로 지도 탭을 거치지 않고 들어와도 뜬다(지도 탭과 src가 같아
+ * 실제 내려받기는 한 번뿐이다). 사용자 조작은 막아 스크롤을 방해하지 않는다.
  */
 export function VenueMiniMap({ name, lat, lng }: VenueMiniMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<naver.maps.Map | null>(null);
-  // 재진입 시 SDK가 이미 로드돼 있으면 즉시 준비 완료로 본다.
+  // 재진입 시 SDK가 이미 로드돼 있으면 즉시 준비 완료로 본다(파생값은 렌더에서 계산).
+  // 최초 로드는 아래 <NaverMapScript>의 onLoaded가 채운다.
   const [scriptLoaded, setScriptLoaded] = useState(
     () => typeof naver !== "undefined" && !!naver.maps,
   );
-
-  // 탭 셸에서 로드한 SDK가 준비될 때까지 대기한다(최대 10초).
-  useEffect(() => {
-    if (scriptLoaded || !NAVER_MAP_CLIENT_ID) return;
-    let tries = 0;
-    const id = setInterval(() => {
-      if (typeof naver !== "undefined" && naver.maps) {
-        clearInterval(id);
-        setScriptLoaded(true);
-      } else if (++tries > 100) {
-        clearInterval(id);
-      }
-    }, 100);
-    return () => clearInterval(id);
-  }, [scriptLoaded]);
+  const [failed, setFailed] = useState(false);
 
   // 지도 인스턴스를 한 번 생성하고 단일 마커를 얹는다.
   useEffect(() => {
@@ -78,26 +76,26 @@ export function VenueMiniMap({ name, lat, lng }: VenueMiniMapProps) {
     };
   }, [scriptLoaded, lat, lng, name]);
 
-  // 키가 없으면 지도를 띄울 수 없어 플레이스홀더를 보여준다.
-  if (!NAVER_MAP_CLIENT_ID) {
-    return (
-      <div className="flex h-[150px] w-full items-center justify-center gap-1.5 rounded-md bg-muted text-body3 text-muted-foreground">
-        <MapPointLineDuotoneIcon size={18} aria-hidden />
-        지도를 표시할 수 없습니다
-      </div>
-    );
-  }
+  // 키가 없거나 스크립트를 못 받으면 지도를 띄울 수 없다.
+  if (!NAVER_MAP_CLIENT_ID || failed) return <MiniMapPlaceholder />;
 
   // 네이버 지도가 내부 컨테이너 position을 덮어써 높이가 무너지므로,
   // 래퍼가 높이를 잡고 실제 지도 컨테이너는 size-full로 채운다.
   return (
-    <div className="h-[150px] w-full overflow-hidden rounded-md bg-muted">
-      <div
-        ref={containerRef}
-        data-naver-map
-        className="size-full"
-        aria-hidden
+    <>
+      <NaverMapScript
+        id="naver-maps-sdk-detail"
+        onLoaded={() => setScriptLoaded(true)}
+        onError={() => setFailed(true)}
       />
-    </div>
+      <div className="h-[150px] w-full overflow-hidden rounded-md bg-muted">
+        <div
+          ref={containerRef}
+          data-naver-map
+          className="size-full"
+          aria-hidden
+        />
+      </div>
+    </>
   );
 }
