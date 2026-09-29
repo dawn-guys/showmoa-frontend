@@ -7,7 +7,7 @@ Phase 2 — API Integration
 Replace mock data with the real backend through the existing route _hooks.
 Screen structure, markup, and UI copy do not change in this phase.
 
-Contract: http://localhost:8080/v3/api-docs (Swagger UI: /swagger-ui/index.html).
+Contract: https://showmoa-dev.duckdns.org/v3/api-docs (Swagger UI: /swagger-ui/index.html).
 Base URL comes from env. Never guess a response shape; if the contract and
 docs/spec disagree, stop and report.
 
@@ -144,11 +144,11 @@ verification code is only delivered by email. /actuator and /h2-console are
 locked (401), so there is no dev bypass.
 
 Owner creates the account manually. The signup UI is not wired yet (Todo B),
-so use Swagger UI (localhost:8080/swagger-ui/index.html) or curl:
+so use Swagger UI (showmoa-dev.duckdns.org/swagger-ui/index.html) or curl:
 
-1. POST localhost:8080/api/email/send { email } -> code arrives by email
-2. POST localhost:8080/api/email/verify { email, code }
-3. POST localhost:8080/api/users/signup { email, password }
+1. POST showmoa-dev.duckdns.org/api/email/send { email } -> code arrives by email
+2. POST showmoa-dev.duckdns.org/api/email/verify { email, code }
+3. POST showmoa-dev.duckdns.org/api/users/signup { email, password }
    password must satisfy the contract: letters + digits, min 8
 4. POST localhost:3000/api/auth/login { email, password }
    expect 204 with Set-Cookie sm_at and sm_rt (our route, not the backend)
@@ -176,8 +176,8 @@ Then tell me, and I verify and check the boxes:
 - [x] POST /api/users/signup, then POST /api/auth/login for the
       "auto login" CTA on the completion screen
 
-Social login (Google OAuth and the in-app browser hand-off) is split out to
-J and deferred to the end of the phase.
+Social login (Google and Kakao OAuth, and the in-app browser hand-off) is
+split out to J and deferred to the end of the phase.
 
 ### C. Password find / update (/password/find, /password/update)
 
@@ -367,26 +367,42 @@ Add a second id that has not started for the D-N badge.
 
 ### J. Social login (/login)
 
-Split out of B and deferred to the end: the contract only covers the last
-step of the flow, so none of it can be built or tested yet. The login screen
-keeps the Google button with no onClick until this section starts.
+The start URLs are still not in the contract (Spring Security filter paths,
+which api-docs does not list). They were confirmed against the deployed
+backend by their live behaviour:
 
-- [ ] Google OAuth: POST /api/auth/oauth/exchange (one-time code → tokens)
-      BLOCKED: login start URL / redirect flow is not in the contract
+- `GET {backend}/oauth2/authorization/{google|kakao}` → 302 to the provider
+  (PKCE S256). `naver` and `apple` answer 500, so those two are all there is.
+- `redirect_uri` is the backend itself (`{backend}/login/oauth2/code/{provider}`),
+  so the front end configures nothing with Google or Kakao.
+- Failure comes back to `{front}/oauth/callback?error=social_login_failed` —
+  the same value for an invalid code and for a cancelled login.
+
+- [ ] Google OAuth: /api/auth/oauth/start/google (302 to the backend) →
+      /oauth/callback reads `code` → POST /api/auth/oauth/exchange
+      (OAuthExchangeRequest) → tokens into the httpOnly cookies → "/"
+- [ ] Kakao OAuth: the same flow through /api/auth/oauth/start/kakao.
+      docs/spec/auth.md item 6 names Google only; the button copy and icon
+      already in the code stay as they are (owner decided)
+- [ ] Failure: back to /login with the existing login-failure toast copy
+      (owner decided — docs/spec has no social-failure copy)
 - [ ] In-app browser detection and hand-off for social login
-      BLOCKED: nothing to hand off to until the start URL exists, and
-      docs/spec has no copy for the external-browser notice
+      BLOCKED: docs/spec has no copy for the external-browser notice, so
+      Google's webview block (disallowed_useragent) is not handled
 
-Ask the backend before starting J:
+Unconfirmed until the owner runs a real login:
 
-- What is the login start URL (`/oauth2/authorization/google`, or does the
-  front end build it)?
-- After success, which front-end URL is the browser sent to, and what is the
-  query parameter holding the one-time code?
-- Does the front end own that callback route, or does the backend redirect
-  to an existing screen such as `/login?code=...`?
-- What comes back on failure or when the user cancels?
-- Is the one-time code's 60-second lifetime correct?
+- The success parameter name. Only the failure redirect is observable and the
+  contract does not document the success one, so /oauth/callback reads
+  `code` (the exchange body's field name). Any other name lands on the
+  failure path instead of logging in with wrong data.
+- The one-time code's lifetime (60 seconds?).
+
+Needs the backend before this can ship:
+
+- The redirect target is hardcoded to `http://localhost:3000`, so social
+  login from a deployed front end bounces back to localhost. It has to
+  become per-environment configuration.
 
 ## Definition of Done
 
