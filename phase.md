@@ -181,19 +181,19 @@ J and deferred to the end of the phase.
 
 ### C. Password find / update (/password/find, /password/update)
 
-- [ ] Find: email send + verify, then POST /api/users/password/reset.
+- [x] Find: email send + verify, then POST /api/users/password/reset.
       Success goes to /login; the spec has no copy or behaviour for this
       step (owner decided).
-- [ ] Update: the same flow and the same POST /api/users/password/reset.
+- [x] Update: the same flow and the same POST /api/users/password/reset.
       PATCH /api/users/me/password is not used — it requires currentPassword
       and the spec flow has no such input (owner decided). The email to
       verify is fixed to the `email` from GET /api/users/me; on success the
       screen logs in with the new password and goes to /setting, or to
       /login if that login fails.
-- [ ] Password rule: resolved in favour of the contract — letters (either
+- [x] Password rule: resolved in favour of the contract — letters (either
       case) + digits, min 8, no max. PasswordSetup and the three copy
       entries in docs/spec/auth.md were updated to match.
-- [ ] Reset failure: one toast with the existing spec copy
+- [x] Reset failure: one toast with the existing spec copy
       "유효하지 않은 이메일 입니다", no status-code branching (owner decided).
       400 also returns to the email step: the verification has expired or
       been consumed, so retrying in place always fails.
@@ -203,14 +203,87 @@ J and deferred to the end of the phase.
 
 ### D. Home (/)
 
-- [ ] Category performances: GET /api/performances/search?genres=...
-      (list response has no theatre name; confirm card fields)
-- [ ] Wished performances (logged in): GET /api/wishlists (Slice — see G)
+- [x] Category performances: GET /api/performances/search?genres=...
+      Confirmed: the list response has no theatre name, so the spec's
+      "공연장 위치" cannot be filled from this endpoint. The category card
+      does not show a venue, so only the featured section is affected.
+      Open backend question: `state` is stale. Of 347 records returned for
+      state=공연중, 111 have an endDate before today (e.g. id 8, ended
+      2026-09-19). The card caption reads `state` per Data Policy, so
+      those render "공연 중" although the run is over. Deriving the caption
+      from the dates on the client would contradict Data Policy ("render
+      values from response fields"), so this is left as is pending a
+      backend fix.
+- [ ] Wished performances (logged in): GET /api/wishlists?page=0&size=20.
+      The response is a Slice, not an array (see G), so the hook selects
+      `content`. Typing it as an array is what made this section show its
+      empty state while the account had four wishes — the shape mismatch is
+      invisible to typecheck. Home shows the first page only and keeps the
+      server order; /wishlist owns the infinite scroll.
+      `WishlistItemResponse` carries `genre`, so the card shows the genre
+      tag, and `status` drives the badge (진행 중 / D-N / 공연 종료).
+      The query key is ["home", "liked"] and deliberately not under the
+      ["wishlist"] prefix: useToggleWishlist's optimistic update treats
+      everything under that prefix as InfiniteData and would break on a
+      plain Slice. Home has no heart of its own and refetches on mount, so
+      a wish changed elsewhere still shows up on return.
 - [ ] Today's schedule (logged in): there is no `date` param and no per-day
-      endpoint. Derive it from GET /api/wishlists/calendar?month=<this month>
-      by keeping the performances whose startDate..endDate covers today
-- [ ] Featured performances: BLOCKED (no endpoint)
+      endpoint. GET /api/wishlists takes page and size only, and a `date`
+      query is silently ignored — it returns the whole list, so this cannot
+      be filtered server side. Derive the day from
+      GET /api/wishlists/calendar?month=<this month> by keeping the
+      performances whose startDate..endDate covers today, comparing at local
+      midnight (parseISO + startOfDay, never toISOString).
+      The query key is ["calendar", <month>], shared with Todo H, so there is
+      no duplicate request and useToggleWishlist's ["calendar"] invalidation
+      and optimistic removal cover it too.
+      `WishlistCalendarResponse` has no `status` and no `genre`, so these
+      cards carry neither the badge nor the genre tag — owner decided.
+- [ ] Featured performances: GET /api/performances, drop the ones whose
+      `state` is 공연완료, then pick 1 at random on the client. There is no
+      dedicated endpoint, so the client-side random pick stands in for one.
+      The size is 20 so a refresh does not keep landing on the same few.
+      PerformanceListResponse has no `theatre`, so the spec's "공연장 위치"
+      is a hardcoded placeholder in featured-section.tsx until the backend
+      adds the field — owner decided, overriding Data Policy for this one
+      value.
+      Still wanted from the backend: view-count ordering (detail-page view
+      count, highest first) needs a way to record a view
+      (POST /api/performances/{id}/views preferred — see the note below) and
+      an endpoint to read the top one, with `theatre` included.
 - [ ] Popular ranking: BLOCKED (no endpoint)
+      Agreed basis: wishlist count, top 5. No schema exposes a wish count
+      and the sort whitelist rejects wishlistCount/likeCount/viewCount
+      (400), so neither a dedicated endpoint nor a sort workaround exists.
+
+Note on the view counter (Featured): incrementing inside
+GET /api/performances/{id} would be inflated by this app's React Query
+defaults (staleTime 0, refetchOnWindowFocus) plus StrictMode double
+invocation. Prefer an explicit POST the screen calls once, or require
+server-side dedupe.
+
+Wishlist verification (D)
+
+Verified against the real API while logged in, on an account with four
+wishes: the liked section gets all four, and 오늘 나의 공연 gets the one whose
+run covers today (701호 [대학로], 2024-10-09~2026-09-30). The month response
+holds three, and the other two ended before today. This matches what
+/wishlist and /calendar show for the same account.
+
+Still unreachable with that data, so still unverified:
+
+- Both empty states ("좋아요 한 공연이 없습니다" / "오늘 공연 일정이 없습니다").
+  Unwish everything, or use an account with no wishes.
+- A null `genre`, which hides the genre tag. All four wishes are 연극.
+- An open run (no endDate). The contract types endDate as always present and
+  no wished performance had it empty, so this may not be reachable at all.
+
+To add a wish by hand while logged in, from the browser console:
+fetch('/api/backend/api/performances/1611/wishlist', { method: 'POST' })
+201 on success, 409 if already wished. Note the path is nested under the
+performance, not under /api/wishlists. id 1611 ("토요명품",
+2026-01-03~2026-12-26) spans today, so it exercises 오늘 나의 공연 as well.
+Add a second id that has not started for the D-N badge.
 
 ### E. Search (/search)
 
@@ -250,6 +323,9 @@ J and deferred to the end of the phase.
 - [ ] Genre filter: client-side filter on `genre`. `WishlistItemResponse`
       carries it, so this is no longer BLOCKED. Compare against
       GENRE_API_VALUES; `genre` is nullable, as it is in the search list.
+- [ ] Re-check the home liked/today sections with real wishes, then check
+      off the two items in Todo D. The API side is confirmed — see
+      "Wishlist verification (D)"; what is left is a look at the screen.
 
 ### H. Calendar (/calendar)
 

@@ -11,10 +11,13 @@ import {
 /**
  * 오늘 캘린더 공연 섹션(로그인 전용). 제목 옆 화살표로 /calendar 이동,
  * 카드가 폭을 넘으면 가로 스와이프. 목록이 비면 빈 상태 문구를 노출한다.
+ *
+ * 조회에 실패하면 목록 자리를 비워 둔다. docs/spec/home.md에 에러 문구가 없고,
+ * 빈 상태 문구를 대신 쓰면 "오늘 일정이 없다"는 사실과 다른 안내가 되기 때문이다.
  */
 export function TodaySection() {
-  const { data, isLoading } = useTodayPerformances();
-  const isEmpty = !isLoading && (data?.length ?? 0) === 0;
+  const { data, isLoading, isError } = useTodayPerformances();
+  const isEmpty = !isLoading && !isError && (data?.length ?? 0) === 0;
 
   return (
     <section
@@ -37,7 +40,7 @@ export function TodaySection() {
 
       {isLoading ? (
         <HorizontalPerformanceListSkeleton />
-      ) : isEmpty ? (
+      ) : isError ? null : isEmpty ? (
         <p className="px-4 py-10 text-center text-body3 text-muted-foreground">
           오늘 공연 일정이 없습니다
         </p>

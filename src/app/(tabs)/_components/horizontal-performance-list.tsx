@@ -1,12 +1,32 @@
 import { PerformanceCard } from "@/shared/components/performance-card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import type { PerformanceSummary } from "../_types";
-import { getPerformanceStatusLabel } from "../_lib/performance-status";
+import type { WishlistItemResponse } from "@/app/(tabs)/wishlist/_types";
+import { getWishlistStatusLabel } from "../_lib/performance-status";
+
+/**
+ * 좋아요(찜 목록)와 오늘 나의 공연(찜 캘린더)이 함께 쓰는 카드 항목.
+ * 캘린더 응답(WishlistCalendarResponse)에는 genre·status가 없어 선택 필드로 둔다.
+ */
+type HorizontalPerformanceListItem = Pick<
+  WishlistItemResponse,
+  "performanceId" | "name" | "posterUrl"
+> &
+  Partial<Pick<WishlistItemResponse, "genre" | "status" | "startDate">>;
 
 interface HorizontalPerformanceListProps {
-  items: PerformanceSummary[];
+  items: HorizontalPerformanceListItem[];
   /** 스크린리더용 목록 이름 */
   label: string;
+}
+
+/** 진행 상태 뱃지 문구. status가 없는 캘린더 항목은 뱃지를 숨긴다. */
+function toStatusLabel(item: HorizontalPerformanceListItem) {
+  if (!item.status || !item.startDate) return undefined;
+
+  return getWishlistStatusLabel({
+    status: item.status,
+    startDate: item.startDate,
+  });
 }
 
 // 가로 스크롤 컨테이너. 카드가 화면 폭을 넘으면 스와이프로 넘긴다.
@@ -27,13 +47,13 @@ export function HorizontalPerformanceList({
   return (
     <ul aria-label={label} className={scrollerClassName}>
       {items.map((performance) => (
-        <li key={performance.id} className={cardItemClassName}>
+        <li key={performance.performanceId} className={cardItemClassName}>
           <PerformanceCard
-            id={performance.id}
-            title={performance.title}
-            genre={performance.genre}
+            id={performance.performanceId}
+            title={performance.name}
             posterUrl={performance.posterUrl}
-            statusLabel={getPerformanceStatusLabel(performance)}
+            genre={performance.genre ?? undefined}
+            statusLabel={toStatusLabel(performance)}
           />
         </li>
       ))}

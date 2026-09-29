@@ -15,21 +15,20 @@ const gridClassName =
 
 /**
  * 공연 카테고리 섹션(로그인·비로그인 공용). 제목 옆 장르 탭을 누르면 해당
- * 장르로 목록이 바뀐다(선택 상태는 nuqs ?genre=). 카드가 영역을 넘으면
+ * 장르로 다시 조회한다(선택 상태는 nuqs ?genre=). 카드가 영역을 넘으면
  * 가로 스와이프로 볼 수 있고, 카드를 누르면 상세로 이동한다.
+ *
+ * 조회에 실패하면 목록 자리를 비워 둔다. docs/spec/home.md에 에러 문구가 없고,
+ * 빈 상태 문구를 대신 쓰면 "공연이 없다"는 사실과 다른 안내가 되기 때문이다.
  */
 export function CategorySection() {
-  const { data, isLoading } = useCategoryPerformances();
   const [genre, setGenre] = useQueryState<GenreFilterOption>(
     "genre",
     parseAsStringLiteral(GENRE_FILTER_OPTIONS).withDefault("전체"),
   );
+  const { data, isLoading, isError } = useCategoryPerformances(genre);
 
   const performances = data ?? [];
-  const filtered =
-    genre === "전체"
-      ? performances
-      : performances.filter((p) => p.genre === genre);
 
   return (
     <section
@@ -70,13 +69,13 @@ export function CategorySection() {
             </div>
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : isError ? null : performances.length === 0 ? (
         <p className="px-4 py-6 text-body3 text-muted-foreground">
           해당 카테고리의 공연이 없습니다
         </p>
       ) : (
         <div className={gridClassName}>
-          {filtered.map((performance) => (
+          {performances.map((performance) => (
             <CategoryCard key={performance.id} performance={performance} />
           ))}
         </div>

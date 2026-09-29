@@ -1,4 +1,5 @@
-// Contract: PerformanceListResponse, PagePerformanceListResponse, AreaResponse (v3/api-docs)
+// Contract: PerformanceListResponse, PagePerformanceListResponse, AreaResponse,
+// TheatreInfo, PerformanceResponse, TicketingSiteInfo (v3/api-docs)
 import type { GenreCategory } from "@/shared/constants/genre";
 
 /**
@@ -157,9 +158,6 @@ export interface PerformanceSummary {
   /** 좋아요(찜) 수. 인기 순위 산정 기준. */
   likeCount: number;
 }
-
-/** 주목받는 공연 (홈 상단 배너 1개) */
-export type FeaturedPerformance = PerformanceSummary;
 
 /** 인기 공연 순위 항목 */
 export interface RankedPerformance extends PerformanceSummary {

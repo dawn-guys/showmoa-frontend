@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { PerformanceSummary } from "../_types";
+import type { PerformanceListResponse } from "@/app/(tabs)/_types";
 import { getCategoryCaption } from "../_lib/performance-status";
 
 /**
@@ -10,7 +10,7 @@ import { getCategoryCaption } from "../_lib/performance-status";
 export function CategoryCard({
   performance,
 }: {
-  performance: PerformanceSummary;
+  performance: PerformanceListResponse;
 }) {
   return (
     <Link
@@ -18,17 +18,19 @@ export function CategoryCard({
       className="flex flex-col gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
-        <Image
-          src={performance.posterUrl}
-          alt=""
-          fill
-          sizes="91px"
-          className="object-cover"
-        />
+        {performance.posterUrl && (
+          <Image
+            src={performance.posterUrl}
+            alt=""
+            fill
+            sizes="91px"
+            className="object-cover"
+          />
+        )}
       </div>
       <div className="flex flex-col gap-2">
         <h3 className="truncate text-sm font-medium text-foreground">
-          {performance.title}
+          {performance.name}
         </h3>
         <p className="truncate text-xs text-muted-foreground">
           {getCategoryCaption(performance)}
