@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -43,6 +44,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto min-h-dvh w-full max-w-app min-w-[320px] bg-background">
           <Providers>{children}</Providers>
         </div>
+        {/* Vercel Speed Insights. 대시보드 토글만으로는 데이터가 잡히지 않아
+            이 컴포넌트가 필요하다. 프로덕션 배포에서만 동작한다. */}
+        <SpeedInsights />
       </body>
     </html>
   );
