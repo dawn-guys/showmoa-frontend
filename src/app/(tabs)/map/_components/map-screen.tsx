@@ -223,7 +223,6 @@ export function MapScreen() {
       {/* 지도 캔버스 + 현재 위치 버튼 */}
       <MapView
         ref={mapViewRef}
-        clientId={NAVER_MAP_CLIENT_ID}
         theatres={theatreList}
         selectedTheatreId={focusedTheatreId}
         onSelectTheatre={handleSelectTheatre}

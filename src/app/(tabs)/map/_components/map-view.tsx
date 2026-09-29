@@ -1,7 +1,6 @@
 /// <reference types="navermaps" />
 "use client";
 
-import Script from "next/script";
 import {
   forwardRef,
   useCallback,
@@ -17,13 +16,13 @@ import type {
 } from "@/app/(tabs)/map/_types";
 import {
   buildMapOptions,
-  buildMapScriptUrl,
   buildUserMarkerContent,
   buildVenueMarkerContent,
   DEFAULT_CENTER,
   toBoundsParams,
   venueMarkerAnchor,
 } from "@/app/(tabs)/map/_lib/naver-map";
+import { NaverMapScript } from "@/app/(tabs)/map/_components/naver-map-script";
 
 // 인증 실패 시 네이버 지도가 호출하는 전역 콜백. (콘솔에 등록한 웹 서비스 URL에
 // 현재 도메인이 없으면 호출된다.)
@@ -48,8 +47,6 @@ export interface MapViewHandle {
 }
 
 interface MapViewProps {
-  /** 네이버 지도 클라이언트 ID(키). */
-  clientId: string;
   theatres: TheatreMapResponse[];
   selectedTheatreId: number | null;
   onSelectTheatre: (id: number) => void;
@@ -67,7 +64,6 @@ interface MapViewProps {
  */
 export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   {
-    clientId,
     theatres,
     selectedTheatreId,
     onSelectTheatre,
@@ -82,7 +78,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const userMarkerRef = useRef<naver.maps.Marker | null>(null);
 
   // 재진입 시 SDK가 이미 로드돼 있으면 즉시 준비 완료로 본다(파생값은 렌더에서 계산).
-  // 최초 로드는 아래 <Script>의 onReady가 채운다.
+  // 최초 로드는 아래 <NaverMapScript>의 onLoaded가 채운다.
   const [scriptLoaded, setScriptLoaded] = useState(
     () => typeof naver !== "undefined" && !!naver.maps,
   );
@@ -243,11 +239,9 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
   return (
     <>
-      <Script
-        id="naver-maps-sdk"
-        src={buildMapScriptUrl(clientId)}
-        strategy="afterInteractive"
-        onReady={() => setScriptLoaded(true)}
+      <NaverMapScript
+        id="naver-maps-sdk-map"
+        onLoaded={() => setScriptLoaded(true)}
         onError={() => onStatusRef.current("error")}
       />
       {/* 지도 영역을 차지하는 래퍼. 높이 = 전체 높이 + 20px - (하단 나브 + 시트 기본 높이).

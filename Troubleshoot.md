@@ -950,3 +950,227 @@ if (isApiError(error) && error.status === 409) return;   // POST: 이미 찜함
   `toApiError`가 `type`을 버린 탓에 계약이 준 구분을 못 쓸 뻔했다.
 - **낙관적 업데이트는 "지금 보이는 화면"에만 걸면 충분하다.** 안 보이는 목록까지
   손으로 맞추려 들면 서버 정렬을 재현하게 되고, 그 순간 틀릴 여지가 생긴다.
+
+## 2026-09-29 · 지도 탭을 거치지 않으면 상세 페이지 공연장 지도가 뜨지 않는다
+
+### 1. 증상
+
+상세 페이지(`/detail/:id`)의 공연장 미니 지도가 회색 박스로만 남는다. 다만
+`/map`을 먼저 들렀다가 상세로 이동하면 정상적으로 뜬다.
+
+에러 토스트도, 콘솔 에러도, 실패 플레이스홀더도 없다. 그냥 아무 일도 일어나지
+않는다. "가끔 된다"처럼 보여서 처음에는 타이밍 문제로 의심했다.
+
+### 2. 진단
+
+`naver` 전역을 만드는 `<Script>`가 어디에 있는지부터 훑었다.
+
+```bash
+grep -rn "buildMapScriptUrl\|next/script\|oapi.map" src/
+# src/app/(tabs)/map/_components/map-view.tsx:4   import Script from "next/script";
+# src/app/(tabs)/map/_components/map-view.tsx:248 src={buildMapScriptUrl(clientId)}
+# (그 외 없음)
+
+cat "src/app/(tabs)/layout.tsx"   # BottomNav만 있고 Script 없음
+```
+
+**SDK를 로드하는 지점은 `map-view.tsx` 한 곳뿐이었다.** 즉 `/map`이 렌더돼야만
+`naver`가 생긴다.
+
+그런데 `venue-mini-map.tsx`의 주석은 이렇게 적혀 있었다.
+
+```
+(tabs) 셸에서 로드한 네이버 지도 SDK가 준비되면 단일 마커 지도를 만든다.
+```
+
+**주석이 사실과 달랐다.** 예전에 셸에 있던 Script가 `map-view`로 옮겨지면서
+주석만 남은 것으로 보인다. 코드를 안 읽고 주석만 믿었으면 한참 헤맬 자리였다.
+
+### 3. 원인
+
+`venue-mini-map`은 자기가 SDK를 로드하지 않고, 남이 로드해 주기를 기다리고
+있었다.
+
+```tsx
+// 탭 셸에서 로드한 SDK가 준비될 때까지 대기한다(최대 10초).
+useEffect(() => {
+  if (scriptLoaded || !NAVER_MAP_CLIENT_ID) return;
+  let tries = 0;
+  const id = setInterval(() => {
+    if (typeof naver !== "undefined" && naver.maps) {
+      clearInterval(id);
+      setScriptLoaded(true);
+    } else if (++tries > 100) {
+      clearInterval(id);   // ← 10초 뒤 조용히 포기. 아무것도 안 알린다.
+    }
+  }, 100);
+  return () => clearInterval(id);
+}, [scriptLoaded]);
+```
+
+아무도 로드해 주지 않으니 100번 폴링하고 끝난다. 실패 처리가 없어서 증상이
+"조용한 회색 박스"로 나타났다.
+
+### 4. "첫 진입부터 받으면 되지 않나" — 비용 먼저 측정
+
+루트 레이아웃에서 미리 받는 방안을 검토했다. 감이 아니라 숫자를 봤다.
+
+```js
+const r = await fetch("https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + id);
+const t = await r.text();
+zlib.gzipSync(t).length          // 91KB
+zlib.brotliCompressSync(t).length // 76KB
+Buffer.byteLength(t)             // 326KB
+```
+
+| | 크기 |
+| --- | --- |
+| 원본 | 326KB |
+| gzip | 91KB |
+| brotli | 76KB |
+
+`NEXT_PUBLIC_NAVER_MAP_STYLE_ID`가 비어 있어 `submodules=gl`은 안 붙는다
+(붙여도 크기는 같았다).
+
+91KB 자체가 치명적이진 않다. 다만 지도를 쓰는 화면은 `/map`과 `/detail/:id`
+둘뿐인데, 루트에 올리면 홈·검색·찜·캘린더·설정이 전부 이 비용을 낸다.
+다운로드보다 모바일에서 326KB를 파싱·실행하는 쪽이 더 아프고, 초기화되면
+`nelo.navercorp.com`으로 로깅 요청까지 나간다.
+
+**결론: 문제는 "언제 받느냐"가 아니라 "받는 곳이 한 군데뿐"이었다.** 로드 지점을
+늘리면 루트에 올릴 이유가 없어진다.
+
+### 5. 해결
+
+로더를 공용 컴포넌트로 빼고, 지도를 그리는 화면이 각자 렌더하게 했다.
+`src`가 같으면 `next/script`가 실제 내려받기를 한 번만 한다.
+
+```tsx
+// src/app/(tabs)/map/_components/naver-map-script.tsx
+export function NaverMapScript({ id, onLoaded, onError }: NaverMapScriptProps) {
+  if (!NAVER_MAP_CLIENT_ID) return null;
+
+  const notifyIfReady = () => {
+    if (typeof naver !== "undefined" && naver.maps) onLoaded();
+  };
+
+  return (
+    <Script
+      id={id}
+      src={buildMapScriptUrl(NAVER_MAP_CLIENT_ID)}
+      strategy="afterInteractive"
+      onReady={notifyIfReady}
+      onLoad={notifyIfReady}
+      onError={onError}
+    />
+  );
+}
+```
+
+- `map-view.tsx` → `id="naver-maps-sdk-map"`
+- `venue-mini-map.tsx` → `id="naver-maps-sdk-detail"` (10초 폴링 제거)
+
+곁들여 정리한 것:
+
+- 상세에도 로드 실패 시 플레이스홀더를 붙였다. 전에는 실패해도 표시가 없었다.
+- 로더가 키를 직접 읽게 되면서 쓰이지 않게 된 `MapView.clientId` prop 제거.
+- 틀린 주석 수정.
+
+### 6. 구현에서 걸린 것 — `next/script`의 캐시 키 함정
+
+처음엔 두 화면이 같은 `id="naver-maps-sdk"`를 쓰려 했다. 소스를 열어보고
+그만뒀다.
+
+```js
+// node_modules/next/dist/client/script.js
+const cacheKey = id || src;
+
+if (cacheKey && LoadCache.has(cacheKey)) return;
+
+if (ScriptCache.has(src)) {
+    LoadCache.add(cacheKey);              // ← 로드가 끝나기 전에 키부터 등록
+    ScriptCache.get(src).then(onLoad, onError);
+    return;
+}
+```
+
+그리고 onReady 이펙트는 `LoadCache`만 본다.
+
+```js
+if (onReady && cacheKey && LoadCache.has(cacheKey)) {
+    onReady();
+}
+```
+
+`cacheKey`가 `id || src`라, **같은 id를 공유하면** 한쪽이 아직 내려받는 중일 때
+다른 쪽이 마운트되면서 `LoadCache`에 키가 먼저 들어간다. 그 뒤 onReady 이펙트가
+`LoadCache.has()`만 보고 **로드 완료 전에 `onReady`를 호출**한다. 그러면 `naver`가
+없는 상태로 "준비 완료" 처리돼, 고치려던 증상과 똑같이 조용히 실패한다.
+
+대응 세 가지를 겹쳤다.
+
+1. **id를 화면별로 분리**(`-map` / `-detail`). 캐시 키가 갈리면 뒤늦게 마운트된
+   쪽은 `ScriptCache.get(src).then(onLoad)` 경로를 타므로, 프로미스가 resolve될
+   때(= 실제 로드 완료) 콜백을 받는다.
+2. **`onLoad`와 `onReady`를 둘 다 받는다.** 먼저 로드한 인스턴스는 `onReady`,
+   나중에 붙은 인스턴스는 `onLoad`가 온다. 어느 쪽이 올지는 마운트 시점이 정한다.
+3. **알리기 전에 `naver.maps` 존재를 확인한다.** 콜백이 중복으로 와도 무해하고,
+   혹시 이른 호출이 와도 잘못된 상태로 넘어가지 않는다.
+
+### 7. 검증
+
+브라우저 없이는 확인이 안 된다. 상세 화면이 클라이언트 렌더라 SSR HTML에는
+지도 컨테이너도, `afterInteractive`로 주입되는 script 태그도 없다.
+
+```bash
+curl -s localhost:3000/detail/1643 | grep -c data-naver-map   # 0 (판단 불가)
+```
+
+Playwright/Puppeteer는 없고 의존성을 늘리고 싶지 않아, 설치된 Chrome을
+헤드리스로 띄우고 CDP로 직접 붙었다. Node 24는 `WebSocket`이 내장이라 추가 설치가
+필요 없다.
+
+```bash
+chrome.exe --headless=new --remote-debugging-port=9222 --user-data-dir=<temp>
+```
+
+```js
+const t = await (await fetch("http://127.0.0.1:9222/json/new?about:blank", { method: "PUT" })).json();
+const ws = new WebSocket(t.webSocketDebuggerUrl);
+// Network.enable 로 maps.js 요청을 세고,
+// Runtime.evaluate 로 naver.maps 존재와 [data-naver-map] 자식 수를 읽는다
+```
+
+탭을 매번 새로 열어 "SPA 세션을 거치지 않은 직접 진입"을 재현했다.
+
+| 경로 | maps.js 요청 | `naver.maps` | 지도 그려짐 |
+| --- | --- | --- | --- |
+| 상세 직접 진입 (원래 깨지던 경로) | 1 | true | true |
+| 지도 탭 | 1 | true | true |
+| 홈 | **0** | false | — |
+| SPA 이동 지도 → 상세 | **누적 1** | true | true |
+
+`typecheck` / `lint` / `format` 통과.
+
+한 가지 함정: 처음에 대기를 6초로 잡았더니 상세 진입이 전부 실패로 나왔다.
+dev 서버의 첫 라우트 컴파일이 그만큼 걸려서였다. 라우트를 미리 한 번씩
+`fetch`해 warm-up한 뒤 9초로 늘리니 안정적으로 재현됐다. **측정 실패를 코드
+실패로 오해할 뻔했다.**
+
+### 8. 교훈
+
+- **주석을 사실로 믿지 말 것.** "(tabs) 셸에서 로드한 SDK"라는 한 줄이 실제로는
+  존재하지 않는 구조를 가리키고 있었다. 코드 이동은 주석을 데려가지 않는다.
+- **조용한 실패를 남기지 말 것.** 폴링 10초 뒤 `clearInterval`만 하고 끝내면
+  증상이 "아무 일도 안 일어남"이 된다. 실패 상태를 만들어 화면에 드러냈어야 했다.
+  실패 표시가 있었으면 진단이 몇 분으로 끝났다.
+- **"무거우니 지연 로드" 전에 무게를 재 볼 것.** 91KB라는 숫자가 나오고 나서야
+  "루트에 올릴지"가 아니라 "로드 지점이 하나뿐인 게 문제"라는 게 보였다.
+- **라이브러리의 중복 제거는 무엇을 키로 쓰는지까지 확인할 것.** `next/script`가
+  "한 번만 로드한다"는 건 맞지만, 키가 `id || src`이고 로드 완료 전에 키를
+  등록한다는 것까지 봐야 같은 id 공유가 위험하다는 걸 알 수 있다. 문서에는 없고
+  소스에만 있었다.
+- **브라우저가 있어야만 검증되는 변경이 있다.** 의존성을 안 늘리고도 설치된
+  Chrome + CDP로 충분히 확인할 수 있다. HTML만 긁어서 "안 된다"고 결론내지 말 것.
+- **검증 실패와 코드 실패를 구분할 것.** dev 첫 컴파일 시간을 빼먹어서 멀쩡한
+  코드를 실패로 읽을 뻔했다. 재현 환경부터 warm-up할 것.
