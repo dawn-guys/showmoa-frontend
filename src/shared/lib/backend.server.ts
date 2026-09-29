@@ -34,7 +34,7 @@ function refreshMaxAgeSeconds(): number {
  */
 export const DEFAULT_BACKEND_API_URL = "https://showmoa-dev.duckdns.org";
 
-function backendBaseUrl(): string {
+export function backendBaseUrl(): string {
   const baseUrl = process.env.BACKEND_API_URL || DEFAULT_BACKEND_API_URL;
   // 끝의 슬래시를 떼어 경로를 붙일 때 //가 생기지 않게 한다.
   return baseUrl.replace(/\/$/, "");
