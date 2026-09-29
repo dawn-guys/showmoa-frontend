@@ -160,7 +160,11 @@ export function DetailScreen({ id }: DetailScreenProps) {
         />
 
         <PerformanceInfoSection
-          periodText={formatPerformancePeriod(detail.startDate, detail.endDate)}
+          periodText={formatPerformancePeriod(
+            detail.startDate,
+            detail.endDate,
+            detail.openRun,
+          )}
           showTimeGuidance={detail.showTimeGuidance}
           ageLimit={detail.ageLimit}
           ticketingSites={detail.ticketingSites}

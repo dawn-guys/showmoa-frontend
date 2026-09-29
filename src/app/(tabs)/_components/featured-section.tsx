@@ -7,12 +7,6 @@ import { useFeaturedPerformance } from "../_hooks/useFeaturedPerformance";
 import { FeaturedPoster } from "./featured-poster";
 
 /**
- * 공연장 위치. PerformanceListResponse에 theatre가 없어 임시로 고정한 값이다.
- * 백엔드가 목록 응답에 공연장을 넣어주면 응답 값으로 교체한다.
- */
-const PLACEHOLDER_VENUE = "서울 세종문화회관 대극장";
-
-/**
  * 주목받는 공연 섹션(로그인·비로그인 공용). 공연 1개를 노출하며,
  * 제목과 포스터를 누르면 상세로 이동한다. 로딩 중에는 스켈레톤을 보여준다.
  */
@@ -54,7 +48,7 @@ export function FeaturedSection() {
             </h2>
           </Link>
           <p className="text-body3 font-light text-muted-foreground">
-            {PLACEHOLDER_VENUE}
+            {data.theatre.name}
           </p>
           {/* genre는 시드 데이터에 null인 공연이 있어 없으면 뱃지를 숨긴다 */}
           {data.genre && (

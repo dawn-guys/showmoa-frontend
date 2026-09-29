@@ -204,16 +204,22 @@ J and deferred to the end of the phase.
 ### D. Home (/)
 
 - [x] Category performances: GET /api/performances/search?genres=...
-      Confirmed: the list response has no theatre name, so the spec's
-      "공연장 위치" cannot be filled from this endpoint. The category card
-      does not show a venue, so only the featured section is affected.
-      Open backend question: `state` is stale. Of 347 records returned for
-      state=공연중, 111 have an endDate before today (e.g. id 8, ended
-      2026-09-19). The card caption reads `state` per Data Policy, so
-      those render "공연 중" although the run is over. Deriving the caption
-      from the dates on the client would contradict Data Policy ("render
-      values from response fields"), so this is left as is pending a
-      backend fix.
+      The list response now carries `theatre`, so a venue name is available
+      here too. The category card does not show one, so nothing changes for
+      this item.
+      Resolved: `state` used to be stale (347 records came back for
+      state=공연중 while 111 of them had an endDate in the past). The backend
+      now computes the enum from today's date instead of reading the stored
+      KOPIS value, so the card caption is correct without any client-side
+      date logic.
+
+Contract change (2026-09-29, affects D/E/F): the backend replaced the KOPIS
+`state` string (공연예정·공연중·공연완료) with the enum UPCOMING | ONGOING |
+ENDED, computed from today (Asia/Seoul) against the run, and added `openRun`
+and `theatre` to PerformanceListResponse. The stale-state problem noted under
+Category performances is fixed by this. PerformanceResponse also gained
+`openRun` and `introImageUrls`, and WishlistCalendarResponse gained `genre`.
+
 - [ ] Wished performances (logged in): GET /api/wishlists?page=0&size=20.
       The response is a Slice, not an array (see G), so the hook selects
       `content`. Typing it as an array is what made this section show its
@@ -240,21 +246,26 @@ J and deferred to the end of the phase.
       `WishlistCalendarResponse` has no `status` and no `genre`, so these
       cards carry neither the badge nor the genre tag — owner decided.
 - [ ] Featured performances: GET /api/performances, drop the ones whose
-      `state` is 공연완료, then pick 1 at random on the client. There is no
+      `state` is ENDED, then pick 1 at random on the client. There is no
       dedicated endpoint, so the client-side random pick stands in for one.
       The size is 20 so a refresh does not keep landing on the same few.
-      PerformanceListResponse has no `theatre`, so the spec's "공연장 위치"
-      is a hardcoded placeholder in featured-section.tsx until the backend
-      adds the field — owner decided, overriding Data Policy for this one
-      value.
+      The spec's "공연장 위치" now comes from the response: the backend added
+      `theatre` to PerformanceListResponse, so the hardcoded placeholder is
+      gone and Data Policy holds again.
       Still wanted from the backend: view-count ordering (detail-page view
       count, highest first) needs a way to record a view
       (POST /api/performances/{id}/views preferred — see the note below) and
-      an endpoint to read the top one, with `theatre` included.
-- [ ] Popular ranking: BLOCKED (no endpoint)
-      Agreed basis: wishlist count, top 5. No schema exposes a wish count
-      and the sort whitelist rejects wishlistCount/likeCount/viewCount
-      (400), so neither a dedicated endpoint nor a sort workaround exists.
+      an endpoint to read the top one.
+- [ ] Popular ranking: GET /api/performances/popular 로 연결
+      Takes no parameters: the server fixes the count at 5, orders by wish
+      count descending (ties broken by the earlier startDate) and drops
+      ended performances. The response is a plain PerformanceListResponse[],
+      not a Page, and carries no rank field — the array order is the rank,
+      so the screen shows index + 1.
+      Only performances with at least one wish are candidates
+      (HAVING COUNT(w) > 0), so an untouched database returns []. There is
+      no empty-state or error copy for this section in docs/spec/home.md,
+      so both hide the section rather than invent a message.
 
 Note on the view counter (Featured): incrementing inside
 GET /api/performances/{id} would be inflated by this app's React Query
