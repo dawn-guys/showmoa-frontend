@@ -1,6 +1,6 @@
 // Contract: UserResponse, TokenResponse, LoginRequest, RefreshTokenRequest,
 // EmailSendRequest, EmailSendResponse, EmailVerifyRequest, SignupRequest,
-// PasswordResetRequest (v3/api-docs)
+// PasswordResetRequest, OAuthExchangeRequest (v3/api-docs)
 
 /** GET /api/users/me, POST /api/users/signup, PATCH /api/users/me/password 응답 */
 export interface UserResponse {
@@ -24,6 +24,11 @@ export interface LoginRequest {
 /** POST /api/auth/refresh 요청 바디 */
 export interface RefreshTokenRequest {
   refreshToken: string;
+}
+
+/** POST /api/auth/oauth/exchange 요청 바디. 소셜 로그인 콜백의 1회용 코드다. */
+export interface OAuthExchangeRequest {
+  code: string;
 }
 
 /** POST /api/email/send 요청 바디 */

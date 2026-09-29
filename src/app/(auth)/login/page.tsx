@@ -13,6 +13,11 @@ import { PasswordField } from "@/shared/components/password-field";
 import { CtaButton } from "@/shared/components/cta-button";
 import { AnimatedToast } from "@/shared/components/toast";
 import { useLogin } from "@/shared/hooks/useLogin";
+import {
+  OAUTH_ERROR_VALUE,
+  oauthStartPath,
+  type OAuthProvider,
+} from "@/shared/constants/oauth";
 import { GoogleLoginButton } from "./_components/google-login-button";
 import { KakaoLoginButton } from "./_components/kakao-login-button";
 import { cn } from "cn";
@@ -31,9 +36,14 @@ const LOGIN_ERROR_MESSAGE =
   "이메일 주소 또는 비밀번호를 확인한 후 다시 시도해 주세요";
 const TOAST_ID = "login-error-toast";
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: PageProps<"/login">) {
   const router = useRouter();
   const { login } = useLogin();
+
+  // 소셜 로그인 실패로 되돌아온 경우(/oauth/callback → /login?error=...).
+  // 스펙에 소셜 실패 문구가 없어 로그인 실패 토스트를 그대로 쓴다(오너 결정).
+  const socialLoginFailed = React.use(searchParams).error === OAUTH_ERROR_VALUE;
+
   const {
     register,
     handleSubmit,
@@ -47,7 +57,9 @@ export default function LoginPage() {
 
   // 이메일 검증 실패 상태(테두리 error 색)와 상단 에러 토스트.
   const [emailInvalid, setEmailInvalid] = React.useState(false);
-  const [toast, setToast] = React.useState<string | null>(null);
+  const [toast, setToast] = React.useState<string | null>(
+    socialLoginFailed ? LOGIN_ERROR_MESSAGE : null,
+  );
 
   // 토스트는 잠시 후 자동으로 사라진다.
   React.useEffect(() => {
@@ -90,6 +102,13 @@ export default function LoginPage() {
     // 뒤로가기로 로그인 화면에 돌아오지 않도록 replace로 이동한다.
     router.replace("/");
   });
+
+  // 소셜 로그인 시작. 백엔드 → 구글·카카오로 이어지는 302 체인을 타야 하므로
+  // 라우터 이동이 아니라 전체 페이지 이동이다. 성공하면 백엔드가
+  // /oauth/callback으로 되돌려 보내고, 거기서 토큰 교환까지 끝난다.
+  const startSocialLogin = (provider: OAuthProvider) => {
+    window.location.href = oauthStartPath(provider);
+  };
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -178,11 +197,16 @@ export default function LoginPage() {
           </CtaButton>
         </form>
 
-        {/* 소셜 로그인 버튼(컴포넌트 분리). 계약에 로그인 시작 URL이 없어
-            (POST /api/auth/oauth/exchange는 콜백 이후 단계다) 연결을 보류한다.
-            phase.md Todo B의 BLOCKED 항목. */}
-        <GoogleLoginButton className="mt-2.5" />
-        <KakaoLoginButton className="mt-2.5" />
+        {/* 소셜 로그인 버튼(컴포넌트 분리). 시작 라우트로 이동만 하고,
+            이후 흐름(코드 교환·토큰 저장)은 /oauth/callback이 서버에서 처리한다. */}
+        <GoogleLoginButton
+          className="mt-2.5"
+          onClick={() => startSocialLogin("google")}
+        />
+        <KakaoLoginButton
+          className="mt-2.5"
+          onClick={() => startSocialLogin("kakao")}
+        />
 
         {/* 링크: 12px, 위아래 30px 여백. */}
         <nav
