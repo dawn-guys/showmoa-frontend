@@ -68,6 +68,7 @@ export function useLocationConsent() {
   return {
     shouldPrompt: shouldPrompt && !answered,
     isGranted: permission === "granted",
+    isChecking: permission === "checking",
     // 동의/취소 어느 쪽이든 이번 진입과 세션에서는 물어본 것으로 기록한다.
     dismiss: () => {
       setAnswered(true);
