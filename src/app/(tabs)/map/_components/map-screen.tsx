@@ -14,7 +14,6 @@ import { useTheatres } from "@/app/(tabs)/map/_hooks/useTheatres";
 import { useTheatrePerformances } from "@/app/(tabs)/map/_hooks/useTheatrePerformances";
 import { useTheatreSearch } from "@/app/(tabs)/map/_hooks/useTheatreSearch";
 import { useLocationConsent } from "@/app/(tabs)/map/_hooks/useLocationConsent";
-import { useAuth } from "@/shared/hooks/useAuth";
 import {
   MapView,
   type MapStatus,
@@ -41,10 +40,8 @@ const EMPTY_PERFORMANCES: PerformanceResponse[] = [];
  * idle이 될 때마다 범위가 갱신되며 재조회된다.
  */
 export function MapScreen() {
-  const { isLoggedIn, isLoading: authLoading } = useAuth();
-  const { shouldPrompt, dismiss } = useLocationConsent(
-    !authLoading && !isLoggedIn,
-  );
+  // 위치 권한 상태로만 모달 노출을 정한다(로그인 여부와 무관한 공통 동작).
+  const { shouldPrompt, isGranted, dismiss } = useLocationConsent();
 
   // 현재 조회 범위. 지도가 준비되기 전에는 null이라 조회하지 않는다.
   const [bounds, setBounds] = useState<TheatreBoundsParams | null>(null);
@@ -82,6 +79,8 @@ export function MapScreen() {
 
   // 딥링크 극장으로의 최초 이동을 한 번만 수행하기 위한 플래그.
   const didFocusTheatreRef = useRef(false);
+  // 권한이 이미 허용된 경우의 현재 위치 이동을 한 번만 수행하기 위한 플래그.
+  const didAutoLocateRef = useRef(false);
 
   const theatreList = theatres ?? EMPTY_THEATRES;
 
@@ -117,6 +116,15 @@ export function MapScreen() {
     didFocusTheatreRef.current = true;
     mapViewRef.current?.panToTheatre(target);
   }, [mapStatus, venueIdParam, theatreList]);
+
+  // 위치 권한이 이미 허용돼 있으면 모달 없이 지도 준비 직후 현재 위치로 이동한다.
+  // 딥링크 극장이 있으면 그 극장 이동이 우선이라 현재 위치로 옮기지 않는다.
+  useEffect(() => {
+    if (didAutoLocateRef.current || !isGranted || mapStatus !== "ready") return;
+    if (venueIdParam) return;
+    didAutoLocateRef.current = true;
+    mapViewRef.current?.locate();
+  }, [isGranted, mapStatus, venueIdParam]);
 
   // 검색 실패 토스트는 잠시 후 자동으로 사라진다.
   useEffect(() => {
@@ -277,7 +285,7 @@ export function MapScreen() {
         />
       )}
 
-      {/* 비로그인 최초 진입 시 위치 정보 동의 모달 */}
+      {/* 위치 권한 미결정(또는 확인 불가) 시 위치 정보 동의 모달 */}
       <LocationConsentModal
         open={shouldPrompt}
         onAgree={handleAgree}
