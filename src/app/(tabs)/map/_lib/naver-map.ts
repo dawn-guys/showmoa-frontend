@@ -15,8 +15,19 @@ export const NAVER_MAP_STYLE_ID = process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID;
  */
 export const DEFAULT_CENTER = { lat: 37.5823, lng: 127.0018 } as const;
 
-/** 기본 줌 레벨. */
+/**
+ * 기본 줌 레벨(거리 수준). 현재 위치로 이동하든 기본 중심을 쓰든 진입 줌은 같다.
+ * 16은 대학로 밖(강남역 0건, 시청 7건)에서 마커가 거의 없고, 대학로는 16에서도
+ * 겹침이 줄지 않아(94% → 92%) 15로 둔다.
+ */
 export const DEFAULT_ZOOM = 15;
+
+/**
+ * 줌 아웃 하한(구 전체 수준, 모바일 기준 약 12×19km). 11은 한 화면에 극장이
+ * 450건 넘게 떠 마커가 거의 다 겹치고 모바일 렌더링 부담도 커서 12로 둔다.
+ * 상한(maxZoom)은 지정하지 않아 지도 타입 기본값을 쓴다.
+ */
+export const MIN_ZOOM = 12;
 
 /**
  * 지도 스크립트 URL. 커스텀 스타일(STYLE_ID)을 쓸 때만 WebGL 서브모듈(gl)을
@@ -35,6 +46,7 @@ export function buildMapOptions(
   const options: naver.maps.MapOptions = {
     center,
     zoom: DEFAULT_ZOOM,
+    minZoom: MIN_ZOOM,
     // 포트폴리오용: 네이버 저작권·로고·스케일바 컨트롤을 숨긴다.
     // (실서비스 배포 시에는 약관상 다시 노출해야 함)
     logoControl: false,
