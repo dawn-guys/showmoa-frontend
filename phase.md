@@ -316,8 +316,12 @@ Add a second id that has not started for the D-N badge.
       guests)
 - [ ] POST/DELETE /api/performances/{performanceId}/wishlist from the like
       CTA; guest keeps the login prompt modal; failure toast from spec
-- [ ] Missing from contract: jibun address, building name, detail images,
-      price. Report per Data Policy; do not fill from mocks. BLOCKED
+- [x] Detail images: connected to PerformanceResponse.introImageUrls
+      (array<string>, confirmed in v3/api-docs and against real responses —
+      1~5 images per performance). Drives the "상세 보기" viewer; the mock is
+      removed. Empty array hides the button per spec.
+- [ ] Missing from contract: jibun address, building name, price. Report per
+      Data Policy; do not fill from mocks. BLOCKED
 
 ### G. Wishlist (/wishlist)
 
