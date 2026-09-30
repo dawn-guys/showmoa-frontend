@@ -32,12 +32,24 @@ declare global {
   }
 }
 
+/**
+ * 현재 위치 조회 옵션. 기본값은 시간 제한이 없어(Infinity) 조회가 늘어지면 진입
+ * 스켈레톤이 끝나지 않으므로 제한을 두고, 1분 내 캐시된 위치는 재사용해 재진입을 빠르게 한다.
+ */
+const GEOLOCATION_OPTIONS: PositionOptions = {
+  timeout: 10_000,
+  maximumAge: 60_000,
+};
+
 /** 지도 로딩 상태. */
 export type MapStatus = "loading" | "ready" | "error";
 
 export interface MapViewHandle {
-  /** 현재 위치로 이동하고 사용자 위치 마커를 갱신한다. */
-  locate: () => void;
+  /**
+   * 현재 위치로 이동하고 사용자 위치 마커를 갱신한다. 이동했으면 true로 끝난다.
+   * instant면 애니메이션 없이 바로 옮기고 그 범위를 곧바로 알린다(진입 시 스켈레톤 아래 이동).
+   */
+  locate: (options?: { instant?: boolean }) => Promise<boolean>;
   /** 해당 극장 위치로 지도를 부드럽게 이동한다. */
   panToTheatre: (theatre: TheatreMapResponse) => void;
   /** 해당 좌표로 지도를 부드럽게 이동한다. */
@@ -189,32 +201,47 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
   // 현재 위치를 얻어 사용자 마커를 갱신하고 지도를 이동한다. 실패(거부 등)해도
   // 기본 좌표로 지도는 정상 동작한다.
-  const moveToCurrentLocation = useCallback(() => {
-    const map = mapRef.current;
-    if (!map || !("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const latlng = new naver.maps.LatLng(latitude, longitude);
-        if (userMarkerRef.current) {
-          userMarkerRef.current.setPosition(latlng);
-        } else {
-          userMarkerRef.current = new naver.maps.Marker({
-            map,
-            position: latlng,
-            icon: {
-              content: buildUserMarkerContent(),
-              anchor: new naver.maps.Point(11, 11),
-            },
-            zIndex: 50,
-          });
+  const moveToCurrentLocation = useCallback(
+    ({ instant = false }: { instant?: boolean } = {}) =>
+      new Promise<boolean>((resolve) => {
+        const map = mapRef.current;
+        if (!map || !("geolocation" in navigator)) {
+          resolve(false);
+          return;
         }
-        // 이동이 끝나면 idle이 발생해 그 지역의 극장 목록을 다시 불러온다.
-        map.panTo(latlng);
-      },
-      () => {},
-    );
-  }, []);
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            const latlng = new naver.maps.LatLng(latitude, longitude);
+            if (userMarkerRef.current) {
+              userMarkerRef.current.setPosition(latlng);
+            } else {
+              userMarkerRef.current = new naver.maps.Marker({
+                map,
+                position: latlng,
+                icon: {
+                  content: buildUserMarkerContent(),
+                  anchor: new naver.maps.Point(11, 11),
+                },
+                zIndex: 50,
+              });
+            }
+            if (instant) {
+              // 바로 옮기고 그 범위를 즉시 알린다. 이후 idle은 같은 범위라 재조회되지 않는다.
+              map.setCenter(latlng);
+              onBoundsRef.current(toBoundsParams(map));
+            } else {
+              // 이동이 끝나면 idle이 발생해 그 지역의 극장 목록을 다시 불러온다.
+              map.panTo(latlng);
+            }
+            resolve(true);
+          },
+          () => resolve(false),
+          GEOLOCATION_OPTIONS,
+        );
+      }),
+    [],
+  );
 
   useImperativeHandle(ref, () => ({
     panToTheatre: (theatre) => {
@@ -266,7 +293,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       <button
         type="button"
         aria-label="현재 위치로 이동"
-        onClick={moveToCurrentLocation}
+        onClick={() => moveToCurrentLocation()}
         className="absolute right-4 bottom-[calc(var(--spacing-bottom-nav)+var(--spacing-venue-sheet)+16px)] z-10 flex size-11 items-center justify-center rounded-full bg-white text-primary shadow-[0_0_2px_0_rgb(0_0_0/0.4)] outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
       >
         <LocateFixed size={24} strokeWidth={2} aria-hidden />

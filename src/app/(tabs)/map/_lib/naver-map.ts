@@ -15,8 +15,19 @@ export const NAVER_MAP_STYLE_ID = process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID;
  */
 export const DEFAULT_CENTER = { lat: 37.5823, lng: 127.0018 } as const;
 
-/** 기본 줌 레벨. */
-export const DEFAULT_ZOOM = 15;
+/**
+ * 기본 줌 레벨. 현재 위치로 이동하든 기본 중심을 쓰든 진입 줌은 같다.
+ * 대학로는 마커가 밀집해 15·16에서는 거의 다 겹치고(94%·92%) 17에서 77%로 줄며,
+ * 18은 대학로 밖(시청 1건, 강남역 0건)에서 마커가 거의 없어 절충값 17로 둔다.
+ */
+export const DEFAULT_ZOOM = 17;
+
+/**
+ * 줌 아웃 하한(구 전체 수준, 모바일 기준 약 12×19km). 11은 한 화면에 극장이
+ * 450건 넘게 떠 마커가 거의 다 겹치고 모바일 렌더링 부담도 커서 12로 둔다.
+ * 상한(maxZoom)은 지정하지 않아 지도 타입 기본값을 쓴다.
+ */
+export const MIN_ZOOM = 12;
 
 /**
  * 지도 스크립트 URL. 커스텀 스타일(STYLE_ID)을 쓸 때만 WebGL 서브모듈(gl)을
@@ -35,6 +46,7 @@ export function buildMapOptions(
   const options: naver.maps.MapOptions = {
     center,
     zoom: DEFAULT_ZOOM,
+    minZoom: MIN_ZOOM,
     // 포트폴리오용: 네이버 저작권·로고·스케일바 컨트롤을 숨긴다.
     // (실서비스 배포 시에는 약관상 다시 노출해야 함)
     logoControl: false,
@@ -59,7 +71,7 @@ export function buildVenueMarkerContent(
 ): string {
   const size = selected ? 44 : 34;
   const label = selected
-    ? `<div style="position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#ffffff;color:#121212;border:1px solid var(--primary);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.2);">${name}</div>`
+    ? `<div style="position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#ffffff;color:#121212;border:2px solid var(--primary);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.2);">${name}</div>`
     : "";
   return `<div style="position:relative;width:${size}px;height:${size}px;">${label}<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3));"><path d="M12 2C7.582 2 4 5.582 4 10c0 5.25 6.94 11.28 7.235 11.534a1.17 1.17 0 0 0 1.53 0C13.06 21.28 20 15.25 20 10c0-4.418-3.582-8-8-8z" fill="var(--primary)"/><circle cx="12" cy="10" r="3.2" fill="#ffffff"/></svg></div>`;
 }

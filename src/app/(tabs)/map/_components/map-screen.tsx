@@ -14,7 +14,6 @@ import { useTheatres } from "@/app/(tabs)/map/_hooks/useTheatres";
 import { useTheatrePerformances } from "@/app/(tabs)/map/_hooks/useTheatrePerformances";
 import { useTheatreSearch } from "@/app/(tabs)/map/_hooks/useTheatreSearch";
 import { useLocationConsent } from "@/app/(tabs)/map/_hooks/useLocationConsent";
-import { useAuth } from "@/shared/hooks/useAuth";
 import {
   MapView,
   type MapStatus,
@@ -41,10 +40,8 @@ const EMPTY_PERFORMANCES: PerformanceResponse[] = [];
  * idle이 될 때마다 범위가 갱신되며 재조회된다.
  */
 export function MapScreen() {
-  const { isLoggedIn, isLoading: authLoading } = useAuth();
-  const { shouldPrompt, dismiss } = useLocationConsent(
-    !authLoading && !isLoggedIn,
-  );
+  // 위치 권한 상태로만 모달 노출을 정한다(로그인 여부와 무관한 공통 동작).
+  const { shouldPrompt, isGranted, isChecking, dismiss } = useLocationConsent();
 
   // 현재 조회 범위. 지도가 준비되기 전에는 null이라 조회하지 않는다.
   const [bounds, setBounds] = useState<TheatreBoundsParams | null>(null);
@@ -82,8 +79,26 @@ export function MapScreen() {
 
   // 딥링크 극장으로의 최초 이동을 한 번만 수행하기 위한 플래그.
   const didFocusTheatreRef = useRef(false);
+  // 진입 시 현재 위치 이동을 한 번만 수행하기 위한 플래그.
+  const didEntryLocateRef = useRef(false);
+
+  /**
+   * 진입 시 현재 위치 이동. 권한이 이미 허용돼 있거나(딥링크 극장이 없을 때)
+   * 모달에서 동의하면 요청하며, 위치 조회가 끝날 때까지 스켈레톤을 덮는다.
+   * 이동에 성공하면 새 위치의 극장 목록이 올 때까지도 스켈레톤을 유지한다.
+   */
+  const [agreed, setAgreed] = useState(false);
+  const [entryLocateDone, setEntryLocateDone] = useState(false);
+  const [awaitingLocatedList, setAwaitingLocatedList] = useState(false);
+  const wantsEntryLocate = (isGranted && !venueIdParam) || agreed;
+  const isEntryLocating = isChecking || (wantsEntryLocate && !entryLocateDone);
 
   const theatreList = theatres ?? EMPTY_THEATRES;
+
+  // 이동한 위치의 목록 조회가 끝나면 대기를 푼다(렌더 중 상태 조정).
+  if (awaitingLocatedList && !theatresFetching) {
+    setAwaitingLocatedList(false);
+  }
 
   // 첫 목록이 도착한 렌더에서 기본 포커스를 확정한다. effect가 아니라 렌더 중
   // 상태 조정이라 추가 커밋 없이 곧바로 반영된다.
@@ -117,6 +132,23 @@ export function MapScreen() {
     didFocusTheatreRef.current = true;
     mapViewRef.current?.panToTheatre(target);
   }, [mapStatus, venueIdParam, theatreList]);
+
+  // 지도가 준비되면 진입 시 현재 위치 이동을 한 번 수행한다. 스켈레톤이 덮고
+  // 있으므로 애니메이션 없이 바로 옮긴다. 실패(거부·시간 초과 등)하면 기본 중심을 유지한다.
+  useEffect(() => {
+    if (
+      didEntryLocateRef.current ||
+      !wantsEntryLocate ||
+      mapStatus !== "ready"
+    ) {
+      return;
+    }
+    didEntryLocateRef.current = true;
+    mapViewRef.current?.locate({ instant: true }).then((moved) => {
+      if (moved) setAwaitingLocatedList(true);
+      setEntryLocateDone(true);
+    });
+  }, [wantsEntryLocate, mapStatus]);
 
   // 검색 실패 토스트는 잠시 후 자동으로 사라진다.
   useEffect(() => {
@@ -168,10 +200,10 @@ export function MapScreen() {
     }
   };
 
-  // 동의: 현재 위치로 이동한다. 이동이 끝나면 idle에서 그 지역을 다시 조회한다.
+  // 동의: 진입 시 현재 위치 이동을 요청한다. 지도가 아직 준비 전이어도 준비된 뒤 이동한다.
   const handleAgree = () => {
     dismiss();
-    mapViewRef.current?.locate();
+    setAgreed(true);
   };
 
   // 취소: 지도는 기본 중심(혜화역)에 그대로 머문다. 지도 생성 시점에 이미 그
@@ -188,7 +220,9 @@ export function MapScreen() {
   // 검색은 지도가 크게 튀는 명시적 액션이라, 검색 중에는 "지도 검색 로딩" 화면
   // (스켈레톤: 지도 영역을 덮은 스피너 + 바텀 시트 스켈레톤)으로 덮는다.
   // 첫 로드와 같은 스켈레톤을 재사용한다. (Figma 지도-검색-로딩)
-  const showSkeleton = isLoading || isSearching;
+  // 진입 시 현재 위치를 찾는 동안과 그 위치의 목록이 오기 전까지도 같은 스켈레톤을 덮는다.
+  const showSkeleton =
+    isLoading || isSearching || isEntryLocating || awaitingLocatedList;
 
   // 스켈레톤을 덮지 않는 지도 이동 재조회는 스켈레톤 대신 지도 위 스피너로 알린다.
   // 캐시·빠른 응답이면 스피너가 잠깐 떴다 사라져 깜빡임처럼 보이므로, 400ms 넘게
@@ -277,7 +311,7 @@ export function MapScreen() {
         />
       )}
 
-      {/* 비로그인 최초 진입 시 위치 정보 동의 모달 */}
+      {/* 위치 권한 미결정(또는 확인 불가) 시 위치 정보 동의 모달 */}
       <LocationConsentModal
         open={shouldPrompt}
         onAgree={handleAgree}
