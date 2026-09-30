@@ -302,7 +302,12 @@ Add a second id that has not started for the D-N badge.
       page, size, sort)
 - [ ] GET /api/performances/areas for the region filter drawer.
       Use values from this API verbatim as `areas`/`districts` params.
-      BLOCKED: API has 2 levels (sido, districts); spec drawer has 3
+      Decided: the region filter is built in 2 levels — sido single select +
+      districts multi select (max 3). The CTA appears once at least one
+      district is selected (owner decided).
+- [ ] Genre filter: multi select of up to 2 categories, excluding "전체".
+      "전체" stays exclusive. The shared GenreFilterSheet keeps single
+      select for /wishlist; search opts in with `multiple` and `max`.
 - [ ] List hearts: list response has no `isWished`. BLOCKED
 
 ### F. Detail (/detail/[id])

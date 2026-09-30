@@ -3,11 +3,7 @@ import type {
   PagePerformanceListResponse,
   PerformanceSearchParams,
 } from "@/app/(tabs)/_types";
-import {
-  toGenresParam,
-  type GenreFilterOption,
-} from "@/shared/constants/genre";
-import { parseRegionFilter } from "@/shared/constants/region";
+import { GENRE_API_VALUES, type GenreCategory } from "@/shared/constants/genre";
 import { apiFetch } from "@/shared/lib/api";
 
 /** 한 번에 불러오는 검색 결과 수. 목록 끝에 닿으면 다음 페이지를 이어 붙인다. */
@@ -16,10 +12,12 @@ const PAGE_SIZE = 20;
 interface UseSearchPerformancesOptions {
   /** 확정된 검색어(디바운스 후). 비어 있으면 조회하지 않는다. */
   keyword: string;
-  /** 장르 필터. "전체"면 genres 파라미터를 보내지 않는다. */
-  genre: GenreFilterOption;
-  /** 지역 필터 한 줄 문자열. 비어 있으면 areas/districts를 보내지 않는다. */
-  region: string;
+  /** 장르 카테고리. 빈 배열("전체")이면 genres 파라미터를 보내지 않는다. */
+  genres: GenreCategory[];
+  /** 시/도(원소 최대 1개). 비어 있으면 지역으로 거르지 않는다. */
+  areas: string[];
+  /** 고른 시/도 안의 구/군. */
+  districts: string[];
 }
 
 /**
@@ -30,23 +28,27 @@ interface UseSearchPerformancesOptions {
  */
 export function useSearchPerformances({
   keyword,
-  genre,
-  region,
+  genres,
+  areas,
+  districts,
 }: UseSearchPerformancesOptions) {
   const trimmed = keyword.trim();
 
   return useInfiniteQuery({
-    queryKey: ["search", "performances", { keyword: trimmed, genre, region }],
+    queryKey: [
+      "search",
+      "performances",
+      { keyword: trimmed, genres, areas, districts },
+    ],
     queryFn: ({ pageParam, signal }) => {
-      // region 문자열에서 파생되는 값이라 queryKey에는 region만 넣는다.
-      const regionFilter = parseRegionFilter(region);
-
+      // 빈 배열은 쿼리스트링에 아무것도 붙지 않아 "필터 없음"과 같다.
       const searchParams: PerformanceSearchParams = {
         keyword: trimmed,
-        genres: toGenresParam(genre),
-        // districts는 areas 없이 보내면 400이므로 항상 함께 보낸다.
-        areas: regionFilter ? [regionFilter.sido] : undefined,
-        districts: regionFilter?.district ? [regionFilter.district] : undefined,
+        // 카테고리를 API 장르 표기로 바꾼다(클래식 → 클래식·국악).
+        genres: genres.map((genre) => GENRE_API_VALUES[genre]),
+        areas,
+        // districts는 areas 없이 보내면 400이므로 시/도가 없으면 보내지 않는다.
+        districts: areas.length > 0 ? districts : undefined,
         page: pageParam,
         size: PAGE_SIZE,
       };
