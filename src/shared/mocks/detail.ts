@@ -1,14 +1,9 @@
 // MOCK: 계약(PerformanceResponse/TheatreInfo)에 없는 디테일 필드의 임시 값.
-// 상세 이미지·지번 주소·건물명·공연장 id(지도 딥링크). 오너 결정 또는 백엔드
-// 반영이 나오면 이 파일과 useBlockedDetailFields를 함께 제거한다.
+// 지번 주소·건물명·공연장 id(지도 딥링크). 오너 결정 또는 백엔드 반영이 나오면
+// 이 파일과 useBlockedDetailFields를 함께 제거한다.
 import type { BlockedDetailFields } from "@/app/(tabs)/detail/[id]/_types";
 
-// MOCK: 상세 이미지 자리표시(picsum, 세로 긴 비율).
-const detailImage = (seed: string) =>
-  `https://picsum.photos/seed/${seed}/690/1200`;
-
 export const MOCK_BLOCKED_DETAIL_FIELDS: BlockedDetailFields = {
-  detailImageUrls: [detailImage("detail-1"), detailImage("detail-2")],
   jibunAddress: "서울특별시 종로구 세종로 81-3",
   buildingName: "세종문화회관",
   // 지도는 실제 극장 id(숫자)를 쓰므로 이 목업 값으로는 딥링크가 매칭되지 않는다.

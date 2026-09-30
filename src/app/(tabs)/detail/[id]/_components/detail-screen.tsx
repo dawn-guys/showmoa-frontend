@@ -17,6 +17,7 @@ import {
 import {
   formatPerformancePeriod,
   formatPerformanceStateCaption,
+  isTicketingHidden,
 } from "@/app/(tabs)/detail/[id]/_lib/detail-format";
 import { PosterViewer } from "@/app/(tabs)/detail/[id]/_components/poster-viewer";
 import { PerformanceInfoSection } from "@/app/(tabs)/detail/[id]/_components/performance-info-section";
@@ -58,7 +59,7 @@ export function DetailScreen({ id }: DetailScreenProps) {
   const router = useRouter();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
   const { data: detail, isLoading, isError } = usePerformanceDetail(id);
-  // 계약에 없는 필드(상세 이미지·지번 주소·건물명·지도 딥링크 id)는 목업으로 채운다.
+  // 계약에 없는 필드(지번 주소·건물명·지도 딥링크 id)는 목업으로 채운다.
   const blocked = useBlockedDetailFields();
   const { add, remove, isPending: isToggling } = useToggleWishlist();
   // 좋아요 "추가" 성공 시에만 재생할 하트 버스트.
@@ -156,7 +157,7 @@ export function DetailScreen({ id }: DetailScreenProps) {
         <PosterViewer
           posterUrl={detail.posterUrl}
           title={detail.name}
-          detailImageUrls={blocked.detailImageUrls}
+          detailImageUrls={detail.introImageUrls}
         />
 
         <PerformanceInfoSection
@@ -165,9 +166,11 @@ export function DetailScreen({ id }: DetailScreenProps) {
             detail.endDate,
             detail.openRun,
           )}
+          openRun={detail.openRun}
           showTimeGuidance={detail.showTimeGuidance}
           ageLimit={detail.ageLimit}
           ticketingSites={detail.ticketingSites}
+          hideTicketing={isTicketingHidden(detail.openRun, detail.endDate)}
         />
 
         {/* 출연진이 없으면(빈 배열) 섹션과 구분 바를 함께 숨겨 바가 겹치지 않게 한다. */}
