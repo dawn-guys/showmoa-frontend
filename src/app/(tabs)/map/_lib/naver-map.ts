@@ -16,11 +16,11 @@ export const NAVER_MAP_STYLE_ID = process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID;
 export const DEFAULT_CENTER = { lat: 37.5823, lng: 127.0018 } as const;
 
 /**
- * 기본 줌 레벨(거리 수준). 현재 위치로 이동하든 기본 중심을 쓰든 진입 줌은 같다.
- * 16은 대학로 밖(강남역 0건, 시청 7건)에서 마커가 거의 없고, 대학로는 16에서도
- * 겹침이 줄지 않아(94% → 92%) 15로 둔다.
+ * 기본 줌 레벨. 현재 위치로 이동하든 기본 중심을 쓰든 진입 줌은 같다.
+ * 대학로는 마커가 밀집해 15·16에서는 거의 다 겹치고(94%·92%) 17에서 77%로 줄며,
+ * 18은 대학로 밖(시청 1건, 강남역 0건)에서 마커가 거의 없어 절충값 17로 둔다.
  */
-export const DEFAULT_ZOOM = 15;
+export const DEFAULT_ZOOM = 17;
 
 /**
  * 줌 아웃 하한(구 전체 수준, 모바일 기준 약 12×19km). 11은 한 화면에 극장이
@@ -71,7 +71,7 @@ export function buildVenueMarkerContent(
 ): string {
   const size = selected ? 44 : 34;
   const label = selected
-    ? `<div style="position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#ffffff;color:#121212;border:1px solid var(--primary);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.2);">${name}</div>`
+    ? `<div style="position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#ffffff;color:#121212;border:2px solid var(--primary);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.2);">${name}</div>`
     : "";
   return `<div style="position:relative;width:${size}px;height:${size}px;">${label}<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3));"><path d="M12 2C7.582 2 4 5.582 4 10c0 5.25 6.94 11.28 7.235 11.534a1.17 1.17 0 0 0 1.53 0C13.06 21.28 20 15.25 20 10c0-4.418-3.582-8-8-8z" fill="var(--primary)"/><circle cx="12" cy="10" r="3.2" fill="#ffffff"/></svg></div>`;
 }
