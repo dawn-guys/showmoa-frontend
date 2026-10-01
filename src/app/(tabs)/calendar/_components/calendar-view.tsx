@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, setMonth } from "date-fns";
 import { ko } from "date-fns/locale";
 import { parseAsString, useQueryState } from "nuqs";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -39,9 +39,15 @@ function CalendarLoggedIn() {
   const today = useMemo(() => new Date(), []);
 
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
+  // 월간 달력의 기준 날짜(처음엔 오늘, 셀을 누르면 그 날짜)와 표시 달.
   // 월 선택 휠 피커는 1~12월만 다루므로 연도는 당해년으로 고정한다.
+  const [baseDate, setBaseDate] = useState<Date>(today);
+  const [month, setMonthIndex] = useState(today.getMonth());
   const year = today.getFullYear();
-  const [month, setMonth] = useState(today.getMonth());
+  // 선택 날짜: 기준 날짜의 일자를 표시 달로 옮긴 값. 그 달에 없는 일자(2월 31일 등)는
+  // date-fns setMonth가 말일로 보정한다. 기준 일자를 따로 두어 2월(28일)을 거쳐
+  // 4월로 가도 31일 기준이 유지된다(4월 30일). 제목·셀 강조가 모두 이 값을 쓴다.
+  const selectedDate = setMonth(baseDate, month);
   const [selectedWeekDate, setSelectedWeekDate] = useState<Date>(today);
 
   // 오버레이 열림 상태는 URL에 저장하되, 히스토리에는 쌓지 않는다(공통 옵션).
@@ -75,13 +81,13 @@ function CalendarLoggedIn() {
 
   const performances = data ?? [];
 
-  // 제목 기준 날짜: 주간은 오늘, 월간은 당월이면 오늘 아니면 해당 월 1일.
-  const isCurrentMonth =
-    year === today.getFullYear() && month === today.getMonth();
-  const referenceDate =
-    viewMode === "week" || isCurrentMonth ? today : new Date(year, month, 1);
+  // 제목은 현재 선택된 날짜다(주간은 선택한 요일, 월간은 선택 날짜).
   // 예: "수요일, 9월 23일". 영어 대신 한글 형식으로 가독성을 높인다.
-  const label = format(referenceDate, "EEEE, M월 d일", { locale: ko });
+  const label = format(
+    viewMode === "week" ? selectedWeekDate : selectedDate,
+    "EEEE, M월 d일",
+    { locale: ko },
+  );
 
   const handleToggleMode = () => {
     setViewMode((mode) => (mode === "month" ? "week" : "month"));
@@ -90,7 +96,8 @@ function CalendarLoggedIn() {
   };
 
   const handleApplyMonth = (nextMonth: number) => {
-    setMonth(nextMonth);
+    // 기준 일자는 그대로 두고 달만 바꾼다(선택 날짜는 위에서 보정해 계산).
+    setMonthIndex(nextMonth);
     setViewMode("month");
   };
 
@@ -129,9 +136,12 @@ function CalendarLoggedIn() {
           <MonthGrid
             year={year}
             month={month}
-            today={today}
+            selectedDate={selectedDate}
             performances={performances}
-            onSelectDay={(date) => setDayParam(format(date, "yyyy-MM-dd"))}
+            onSelectDay={(date) => {
+              setBaseDate(date);
+              setDayParam(format(date, "yyyy-MM-dd"));
+            }}
           />
         </>
       ) : (

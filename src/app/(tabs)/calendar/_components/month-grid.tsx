@@ -10,8 +10,8 @@ interface MonthGridProps {
   year: number;
   /** 표시 월(0=1월) */
   month: number;
-  /** 오늘 */
-  today: Date;
+  /** 선택된 날짜. 이 날짜의 숫자를 주조색으로 강조한다. */
+  selectedDate: Date;
   /** 이 달의 찜 공연 목록. 날짜별 목록은 셀에서 파생한다. */
   performances: WishlistCalendarResponse[];
   /** 날짜 카드 선택 콜백. 해당 날짜의 공연 바텀 시트를 연다. */
@@ -25,7 +25,7 @@ interface MonthGridProps {
 export function MonthGrid({
   year,
   month,
-  today,
+  selectedDate,
   performances,
   onSelectDay,
 }: MonthGridProps) {
@@ -43,7 +43,7 @@ export function MonthGrid({
               key={day.toISOString()}
               date={day}
               isCurrentMonth={day.getMonth() === month}
-              isToday={isSameDay(day, today)}
+              isSelected={isSameDay(day, selectedDate)}
               performances={getPerformancesForDay(performances, day)}
               onSelect={onSelectDay}
             />
