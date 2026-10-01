@@ -9,13 +9,11 @@ import { VenueMiniMap } from "@/app/(tabs)/detail/[id]/_components/venue-mini-ma
 interface VenueSectionProps {
   /** 공연장 정보(이름·도로명 주소·전화번호·좌표). PerformanceResponse.theatre. */
   theatre: TheatreInfo;
-  // MOCK: 아래 세 값은 계약에 없어 목업으로 채운다(오너 결정 대기).
+  // MOCK: 아래 두 값은 계약에 없어 목업으로 채운다(오너 결정 대기).
   /** 지번 주소 */
   jibunAddress: string;
   /** 건물명 */
   buildingName: string;
-  /** /map?venueId= 딥링크에 쓰는 공연장 id */
-  venueId: string;
   /** 주소 텍스트 복사 요청(성공/실패 토스트는 상위에서 처리). */
   onCopyAddress: (text: string) => void;
 }
@@ -45,7 +43,8 @@ function CopyableAddress({
 }
 
 /**
- * 공연장 주소 섹션. 제목 옆 화살표로 지도 페이지(/map?venueId=)로 이동하고,
+ * 공연장 주소 섹션. 제목 옆 화살표로 공연장 좌표를 중심으로 한 지도 페이지
+ * (/map?lat=&lng=)로 이동하고,
  * 미니 지도·주소(지번/도로명, 복사)·건물명·전화번호를 보여준다.
  * 전화번호는 등록되지 않은 극장이 있어 값이 있을 때만 노출한다.
  */
@@ -53,7 +52,6 @@ export function VenueSection({
   theatre,
   jibunAddress,
   buildingName,
-  venueId,
   onCopyAddress,
 }: VenueSectionProps) {
   return (
@@ -62,7 +60,7 @@ export function VenueSection({
       <div className="flex items-center justify-between">
         <h2 className="text-h1 font-semibold text-foreground">공연장 주소</h2>
         <Link
-          href={`/map?venueId=${venueId}`}
+          href={`/map?lat=${theatre.latitude}&lng=${theatre.longitude}`}
           aria-label="지도에서 공연장 위치 보기"
           className="-my-2.5 flex size-11 items-center justify-end rounded-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-60"
         >

@@ -73,6 +73,11 @@ interface MapViewProps {
    * 실제 이동은 부모가 ref의 locate()로 수행한다(버튼은 요청만 알린다).
    */
   onLocate: () => void;
+  /**
+   * 지도 생성 시 중심 좌표. 디테일 딥링크(?lat=&lng=)로 들어오면 공연장 좌표를
+   * 넘긴다. 없으면 기본 중심(혜화역)을 쓴다. 생성 시점에 한 번만 읽는다.
+   */
+  initialCenter?: { lat: number; lng: number } | null;
 }
 
 /**
@@ -87,6 +92,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     onStatusChange,
     onBoundsChange,
     onLocate,
+    initialCenter,
   },
   ref,
 ) {
@@ -107,6 +113,8 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const onStatusRef = useRef(onStatusChange);
   const onBoundsRef = useRef(onBoundsChange);
   const selectedRef = useRef(selectedTheatreId);
+  // 생성 시점에만 쓰는 초기 중심(이후 바뀌어도 지도를 다시 만들지 않는다).
+  const initialCenterRef = useRef(initialCenter ?? DEFAULT_CENTER);
   useEffect(() => {
     onSelectRef.current = onSelectTheatre;
     onStatusRef.current = onStatusChange;
@@ -128,8 +136,8 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     if (typeof naver === "undefined" || !naver.maps) return;
 
     const center = new naver.maps.LatLng(
-      DEFAULT_CENTER.lat,
-      DEFAULT_CENTER.lng,
+      initialCenterRef.current.lat,
+      initialCenterRef.current.lng,
     );
     const map = new naver.maps.Map(
       containerRef.current,
