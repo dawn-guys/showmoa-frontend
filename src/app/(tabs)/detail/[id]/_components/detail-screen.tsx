@@ -216,7 +216,9 @@ export function DetailScreen({ id }: DetailScreenProps) {
         title="로그인"
         description="로그인이 필요한 서비스 입니다. 로그인 하시겠습니까?"
         confirmLabel="로그인 하기"
-        onConfirm={() => router.push("/login")}
+        // 모달 닫기(?login 제거)가 URL에 반영된 뒤 이동한다. 먼저 이동하면 뒤늦은
+        // URL 갱신이 현재 페이지로 덮어써 /login 이동이 취소된다.
+        onConfirm={() => setLoginOpen(false).then(() => router.push("/login"))}
       />
     </>
   );
