@@ -14,6 +14,8 @@ import { useTheatres } from "@/app/(tabs)/map/_hooks/useTheatres";
 import { useTheatrePerformances } from "@/app/(tabs)/map/_hooks/useTheatrePerformances";
 import { useTheatreSearch } from "@/app/(tabs)/map/_hooks/useTheatreSearch";
 import { useLocationConsent } from "@/app/(tabs)/map/_hooks/useLocationConsent";
+import { useGeolocationPermissionWatcher } from "@/app/(tabs)/map/_hooks/useGeolocationPermissionWatcher";
+import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import {
   MapView,
   type MapStatus,
@@ -26,6 +28,7 @@ import {
 } from "@/app/(tabs)/map/_components/map-skeleton";
 import { VenueBottomSheet } from "@/app/(tabs)/map/_components/venue-bottom-sheet";
 import { LocationConsentModal } from "@/app/(tabs)/map/_components/location-consent-modal";
+import { GpsPermissionModal } from "@/app/(tabs)/map/_components/gps-permission-modal";
 
 // 목록 미로드 시 넘길 안정적인 빈 배열(참조가 매 렌더 바뀌지 않도록 모듈 상수로 둔다).
 const EMPTY_THEATRES: TheatreMapResponse[] = [];
@@ -60,22 +63,36 @@ export function MapScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   /**
-   * 포커스된 극장. 사용자 액션(마커 클릭·검색)으로만 바뀐다.
+   * 바텀 시트에 보일 포커스 극장. null이면 "공연장을 선택해 주세요" placeholder다.
    *
-   * id가 아니라 응답 객체를 그대로 담는다. 그래서 지도를 옮겨 이 극장이 현재
-   * 뷰포트 조회 결과에서 빠져도 시트는 그대로 유지되고(시트가 사라지지 않음),
-   * 지도 이동만으로 다른 극장이 포커스되지도 않는다.
+   * id가 아니라 응답 객체를 그대로 담는다. 그래서 지도를 단순히 드래그해 이 극장이
+   * 현재 뷰포트 조회 결과에서 빠져도 시트는 그대로 유지되고, 드래그만으로 다른
+   * 극장이 포커스되지도 않는다.
+   *
+   * 포커스는 다음 시점에만 바뀐다: ①최초 로드(딥링크 극장 또는 지도 중앙 최근접
+   * 극장) ②마커 클릭·검색(사용자 선택) ③현재 위치로 이동한 뒤(진입 자동·GPS 버튼)
+   * 그 범위의 최근접 극장. 이동한 범위에 공연장이 없으면 null(placeholder)이 된다.
    */
-  const [selectedTheatre, setSelectedTheatre] =
+  const [focusedTheatre, setFocusedTheatre] =
     useState<TheatreMapResponse | null>(null);
 
+  // 최초 포커스를 한 번만 정하기 위한 플래그.
+  const [didInitialFocus, setDidInitialFocus] = useState(false);
+
   /**
-   * 진입 직후 1회만 정하는 기본 포커스(딥링크 극장 → 지도 중앙 최근접 극장).
-   * 시트는 진입 시점부터 자리를 차지하는 UI라 비워 둘 수 없어 기본값을 둔다.
-   * 첫 목록에서 한 번만 정하고, 이후 지도 이동으로는 갱신하지 않는다.
+   * 현재 위치로 이동한 뒤 그 범위 목록으로 포커스를 다시 잡기 위한 단계.
+   * 이동이 유발한 조회(fetch)가 시작됐다 끝나는 것을 보고 반영해, 단순 지도
+   * 드래그 조회와 섞이지 않게 한다.
+   * - "awaiting-fetch": GPS 버튼 이동(panTo). idle 이후 조회가 시작되길 기다린다.
+   * - "awaiting-settle": 진입 자동 이동(즉시 범위 변경) 또는 조회 시작 확인 뒤.
+   *   조회가 끝나면 그 범위의 최근접 극장으로 포커스한다.
    */
-  const [initialTheatre, setInitialTheatre] =
-    useState<TheatreMapResponse | null>(null);
+  const [moveRefocus, setMoveRefocus] = useState<
+    "idle" | "awaiting-fetch" | "awaiting-settle"
+  >("idle");
+
+  // GPS 안내 모달(위치 권한이 막혀 현재 위치를 못 가져올 때). URL 플래그로 둬 뒤로가기가 쌓이지 않는다.
+  const [gpsModalOpen, setGpsModalOpen] = useOverlayFlag("gps");
 
   // 딥링크 극장으로의 최초 이동을 한 번만 수행하기 위한 플래그.
   const didFocusTheatreRef = useRef(false);
@@ -100,21 +117,33 @@ export function MapScreen() {
     setAwaitingLocatedList(false);
   }
 
-  // 첫 목록이 도착한 렌더에서 기본 포커스를 확정한다. effect가 아니라 렌더 중
-  // 상태 조정이라 추가 커밋 없이 곧바로 반영된다.
-  if (initialTheatre === null && theatreList.length > 0) {
+  // 최초 포커스: 위치 이동이 없거나 실패한 경우를 위해 첫 목록의 최근접 극장
+  // (딥링크면 그 극장)으로 1회 포커스한다. 위치 이동이 성공하면 아래 이동 포커스가
+  // 그 범위 최근접으로 다시 잡는다(진입 자동 이동은 스켈레톤이 덮는 동안 교체).
+  // effect가 아니라 렌더 중 상태 조정이라 추가 커밋 없이 곧바로 반영된다.
+  if (!didInitialFocus && theatreList.length > 0) {
     const fromDeepLink = venueIdParam
       ? theatreList.find((theatre) => String(theatre.id) === venueIdParam)
       : undefined;
-    setInitialTheatre(
+    setDidInitialFocus(true);
+    setFocusedTheatre(
       fromDeepLink ??
         theatreList.find((theatre) => theatre.nearest) ??
-        theatreList[0],
+        theatreList[0] ??
+        null,
     );
   }
 
-  // 사용자가 고른 극장이 있으면 그것, 없으면 진입 시 기본 포커스.
-  const focusedTheatre = selectedTheatre ?? initialTheatre;
+  // 이동 포커스 상태 머신(렌더 중 상태 조정). 조회가 시작됐다(fetch) 끝나는 것을
+  // 확인한 뒤, 이동한 범위의 최근접 극장으로 포커스한다. 범위에 공연장이 없으면
+  // null로 둬 placeholder를 보여준다.
+  if (moveRefocus === "awaiting-fetch" && theatresFetching) {
+    setMoveRefocus("awaiting-settle");
+  } else if (moveRefocus === "awaiting-settle" && !theatresFetching) {
+    setMoveRefocus("idle");
+    setFocusedTheatre(theatreList.find((theatre) => theatre.nearest) ?? null);
+  }
+
   const focusedTheatreId = focusedTheatre?.id ?? null;
 
   const { data: performances, isLoading: performancesLoading } =
@@ -145,7 +174,14 @@ export function MapScreen() {
     }
     didEntryLocateRef.current = true;
     mapViewRef.current?.locate({ instant: true }).then((moved) => {
-      if (moved) setAwaitingLocatedList(true);
+      // 내 위치로 옮겨졌으면 그 지역 목록을 기다렸다가(스켈레톤) 그 범위의 최근접
+      // 극장으로 포커스를 다시 잡는다. 즉시 이동이라 범위가 이미 바뀌어 조회가
+      // 시작됐으므로 바로 "awaiting-settle"로 둔다. 이동이 없었으면 위의 최초
+      // 포커스(혜화역 최근접)를 그대로 둔다.
+      if (moved) {
+        setAwaitingLocatedList(true);
+        setMoveRefocus("awaiting-settle");
+      }
       setEntryLocateDone(true);
     });
   }, [wantsEntryLocate, mapStatus]);
@@ -157,13 +193,40 @@ export function MapScreen() {
     return () => clearTimeout(timer);
   }, [errorMessage]);
 
-  // 마커 클릭: 사용자 액션이므로 포커스를 옮긴다.
+  // 마커 클릭: 사용자 액션이므로 포커스를 그 극장으로 옮기고, 진행 중인 이동
+  // 포커스가 있으면 취소한다.
   const handleSelectTheatre = (id: number) => {
     const theatre = theatreList.find((t) => t.id === id);
     if (!theatre) return;
-    setSelectedTheatre(theatre);
+    setMoveRefocus("idle");
+    setFocusedTheatre(theatre);
     mapViewRef.current?.panToTheatre(theatre);
   };
+
+  /**
+   * 현재 위치 버튼. 권한 상태를 미리 묻지 않고 바로 현재 위치를 요청한다.
+   * - 성공(허용됨/네이티브 창에서 허용): 받은 좌표로 지도를 옮기고, 그 범위 목록이
+   *   오면 그 범위의 최근접 극장으로 포커스를 다시 잡는다(없으면 placeholder).
+   * - 실패(차단·거부·조회 불가): 지도는 그대로 두고, 설정에서 허용하도록 안내 모달만 띄운다.
+   *   (스펙에 없는 에러 토스트는 띄우지 않는다.)
+   */
+  const handleLocate = async () => {
+    const moved = await mapViewRef.current?.locate();
+    if (moved) {
+      // panTo 이동이라 idle 이후 그 범위 조회가 시작된다. 그 조회가 끝나면
+      // 최근접 극장으로 다시 포커스한다.
+      setMoveRefocus("awaiting-fetch");
+    } else {
+      setGpsModalOpen(true);
+    }
+  };
+
+  // 안내 모달이 떠 있는 동안 사용자가 브라우저 설정에서 위치를 허용하면,
+  // 모달을 닫고 바로 현재 위치로 이동한다(코드로 권한창을 다시 띄울 수 없어 유일한 복구 경로).
+  useGeolocationPermissionWatcher(gpsModalOpen, () => {
+    setGpsModalOpen(false);
+    handleLocate();
+  });
 
   /**
    * 극장·공연명·지역 통합 검색. 현재 지도 중심을 함께 보내 가까운 결과가 먼저
@@ -193,7 +256,8 @@ export function MapScreen() {
         return;
       }
 
-      setSelectedTheatre(nearestMatch);
+      setMoveRefocus("idle");
+      setFocusedTheatre(nearestMatch);
       mapViewRef.current?.panToTheatre(nearestMatch);
     } catch {
       setErrorMessage("검색 결과를 찾을 수 없습니다");
@@ -262,6 +326,7 @@ export function MapScreen() {
         onSelectTheatre={handleSelectTheatre}
         onStatusChange={setMapStatus}
         onBoundsChange={setBounds}
+        onLocate={handleLocate}
       />
 
       {/* 첫 로드·검색 중에는 스켈레톤을 지도 위에 얹는다. */}
@@ -302,8 +367,10 @@ export function MapScreen() {
         className="top-[calc(env(safe-area-inset-top)+72px)]"
       />
 
-      {/* 극장 공연 정보 바텀 시트(로드·검색 완료 후) */}
-      {!showSkeleton && focusedTheatre && (
+      {/* 바텀 시트(로드·검색 완료 후). 같은 시트를 유지하며, 포커스 극장이 없으면
+          (이동한 범위에 공연장이 없을 때) 극장 대신 "공연장을 선택해 주세요" 안내를
+          보여준다(theatre=null). 시트를 새로 만들지 않는다. */}
+      {!showSkeleton && (
         <VenueBottomSheet
           theatre={focusedTheatre}
           performances={performances ?? EMPTY_PERFORMANCES}
@@ -317,6 +384,9 @@ export function MapScreen() {
         onAgree={handleAgree}
         onDecline={handleDecline}
       />
+
+      {/* GPS 버튼으로 현재 위치를 못 가져왔을 때(권한 차단) 설정 안내 모달 */}
+      <GpsPermissionModal open={gpsModalOpen} onOpenChange={setGpsModalOpen} />
     </main>
   );
 }

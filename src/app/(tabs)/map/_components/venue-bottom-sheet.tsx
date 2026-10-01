@@ -28,8 +28,11 @@ const SNAP_THRESHOLD = 16;
 const TOAST_DURATION_MS = 2500;
 
 interface VenueBottomSheetProps {
-  /** 선택된 극장. */
-  theatre: TheatreMapResponse;
+  /**
+   * 선택된 극장. null이면 공연장 미선택 상태(현재 위치 이동 직후)라, 같은 시트에서
+   * 공연 목록 대신 "공연장을 선택해 주세요" 안내만 보여준다(시트 자체는 유지).
+   */
+  theatre: TheatreMapResponse | null;
   /** 이 극장의 공연 목록. 로딩 중이면 빈 배열. */
   performances: PerformanceResponse[];
   /** 공연 목록 조회 중 여부. */
@@ -41,6 +44,9 @@ interface VenueBottomSheetProps {
  * 위로 살짝 끌면 최대 높이로, 최대 높이에서 아래로 살짝 끌면 기본 높이로
  * 스르륵 전환되는 2단계 스냅 방식이다(키보드로도 조작 가능). 극장 이름·
  * 공연 개수와 공연 목록을 보여주며 하단 나브 위에 고정된다.
+ *
+ * 극장이 선택되지 않았을 때(theatre=null)는 같은 시트를 유지한 채 안내 문구만
+ * 보여준다. 이때는 펼칠 내용이 없어 기본 높이로 고정한다. (Figma 803:3555)
  */
 export function VenueBottomSheet({
   theatre,
@@ -49,6 +55,12 @@ export function VenueBottomSheet({
 }: VenueBottomSheetProps) {
   // 두 단계(기본/최대)만 갖는 스냅 상태.
   const [expanded, setExpanded] = useState(false);
+
+  // 극장 미선택(안내) 상태에서는 펼칠 내용이 없으므로 접힘으로 되돌린다.
+  // (effect가 아니라 렌더 중 상태 조정이라 추가 커밋 없이 반영된다.)
+  if (!theatre && expanded) {
+    setExpanded(false);
+  }
 
   const router = useRouter();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
@@ -73,6 +85,7 @@ export function VenueBottomSheet({
   const dragStartY = useRef<number | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (!theatre) return;
     dragStartY.current = e.clientY;
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -97,6 +110,7 @@ export function VenueBottomSheet({
 
   // 키보드 대체 조작: ↑는 펼치기, ↓는 접기, Enter/Space는 토글.
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!theatre) return;
     if (e.key === "ArrowUp") {
       e.preventDefault();
       setExpanded(true);
@@ -124,65 +138,82 @@ export function VenueBottomSheet({
 
   return (
     <section
-      aria-label={`${theatre.name} 공연 목록`}
-      style={{ height: expanded ? MAX_HEIGHT : DEFAULT_HEIGHT }}
+      aria-label={theatre ? `${theatre.name} 공연 목록` : "공연장 선택 안내"}
+      style={{ height: theatre && expanded ? MAX_HEIGHT : DEFAULT_HEIGHT }}
       className="fixed inset-x-0 bottom-[calc(var(--spacing-bottom-nav)+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-app flex-col rounded-t-[20px] bg-[#121212] shadow-[0_-4px_16px_rgba(0,0,0,0.3)] transition-[height] duration-300 ease-out motion-reduce:transition-none"
     >
-      {/* 드래그 핸들(키보드 조작 가능). 위로 살짝 끌면 최대, 최대에서 아래로 살짝 끌면 기본. */}
+      {/* 드래그 핸들(키보드 조작 가능). 위로 살짝 끌면 최대, 최대에서 아래로 살짝 끌면 기본.
+          극장 미선택 상태에서는 조절할 내용이 없어 조작하지 않는다(핸들은 디자인상 유지). */}
       <button
         type="button"
         aria-label="바텀 시트 높이 조절"
-        aria-expanded={expanded}
+        aria-expanded={theatre ? expanded : undefined}
+        disabled={!theatre}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onKeyDown={handleKeyDown}
-        className="flex w-full shrink-0 touch-none items-start justify-center pt-4.25 pb-5 outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-full shrink-0 touch-none items-start justify-center pt-4.25 pb-5 outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
       >
         <span aria-hidden className="h-1 w-10 rounded-full bg-primary" />
       </button>
 
-      {/* 헤더: 극장 이름 · 공연 개수. 개수는 아래 목록과 어긋나지 않도록 목록
-          길이를 쓴다(응답의 performanceCount는 "오늘 공연 중"인 수라 다르다). */}
-      <h2 className="mb-5 shrink-0 px-4 text-body2 font-medium text-foreground">
-        {theatre.name}
-        {!isLoading && (
-          <span className="font-medium text-muted-foreground">
-            {" · 공연 "}
-            {performances.length}개
-          </span>
-        )}
-      </h2>
+      {theatre ? (
+        <>
+          {/* 헤더: 극장 이름 · 공연 개수. 개수는 아래 목록과 어긋나지 않도록 목록
+              길이를 쓴다(응답의 performanceCount는 "오늘 공연 중"인 수라 다르다). */}
+          <h2 className="mb-5 shrink-0 px-4 text-body2 font-medium text-foreground">
+            {theatre.name}
+            {!isLoading && (
+              <span className="font-medium text-muted-foreground">
+                {" · 공연 "}
+                {performances.length}개
+              </span>
+            )}
+          </h2>
 
-      {/* 공연 목록. 스크롤바 UI는 숨기되 부드럽게 스크롤된다. */}
-      {isLoading ? (
-        <div
-          aria-busy="true"
-          aria-label="공연 목록을 불러오는 중"
-          className="flex flex-col gap-4 px-4 pt-1"
-        >
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="size-16 shrink-0 rounded-lg" aria-hidden />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <Skeleton className="h-4 w-3/5" aria-hidden />
-                <Skeleton className="h-3 w-2/5" aria-hidden />
-              </div>
-              <Skeleton className="size-6 shrink-0 rounded-full" aria-hidden />
+          {/* 공연 목록. 스크롤바 UI는 숨기되 부드럽게 스크롤된다. */}
+          {isLoading ? (
+            <div
+              aria-busy="true"
+              aria-label="공연 목록을 불러오는 중"
+              className="flex flex-col gap-4 px-4 pt-1"
+            >
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton
+                    className="size-16 shrink-0 rounded-lg"
+                    aria-hidden
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <Skeleton className="h-4 w-3/5" aria-hidden />
+                    <Skeleton className="h-3 w-2/5" aria-hidden />
+                  </div>
+                  <Skeleton
+                    className="size-6 shrink-0 rounded-full"
+                    aria-hidden
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <ul className="flex min-h-0 flex-1 [scrollbar-width:none] flex-col gap-4 overflow-y-auto overscroll-contain scroll-smooth px-4 pt-1 pb-4 [&::-webkit-scrollbar]:hidden">
+              {performances.map((performance) => (
+                <VenuePerformanceItem
+                  key={performance.id}
+                  performance={performance}
+                  isLiked={performance.isWished}
+                  onToggleLike={() => handleToggleLike(performance)}
+                />
+              ))}
+            </ul>
+          )}
+        </>
       ) : (
-        <ul className="flex min-h-0 flex-1 [scrollbar-width:none] flex-col gap-4 overflow-y-auto overscroll-contain scroll-smooth px-4 pt-1 pb-4 [&::-webkit-scrollbar]:hidden">
-          {performances.map((performance) => (
-            <VenuePerformanceItem
-              key={performance.id}
-              performance={performance}
-              isLiked={performance.isWished}
-              onToggleLike={() => handleToggleLike(performance)}
-            />
-          ))}
-        </ul>
+        /* 극장 미선택 안내. 같은 시트를 유지한 채 문구만 보여준다. (Figma 803:3555) */
+        <p className="flex min-h-0 flex-1 items-center justify-center px-4 pb-4 text-center text-h2 font-medium break-keep text-hint">
+          공연장을 선택해 주세요
+        </p>
       )}
 
       {/* 찜 실패 토스트. 상단 검색창·검색 실패 토스트와 겹치지 않게 아래로 둔다. */}

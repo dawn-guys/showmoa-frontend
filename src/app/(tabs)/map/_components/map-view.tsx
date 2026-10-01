@@ -68,6 +68,11 @@ interface MapViewProps {
    * 이후에는 지도 이동·줌이 멈춘 idle 시점마다 호출된다.
    */
   onBoundsChange: (bounds: TheatreBoundsParams) => void;
+  /**
+   * 현재 위치 버튼 클릭. 권한 확인·안내 모달·시트 처리는 부모가 오케스트레이션하므로
+   * 실제 이동은 부모가 ref의 locate()로 수행한다(버튼은 요청만 알린다).
+   */
+  onLocate: () => void;
 }
 
 /**
@@ -81,6 +86,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     onSelectTheatre,
     onStatusChange,
     onBoundsChange,
+    onLocate,
   },
   ref,
 ) {
@@ -293,7 +299,7 @@ export const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       <button
         type="button"
         aria-label="현재 위치로 이동"
-        onClick={() => moveToCurrentLocation()}
+        onClick={onLocate}
         className="absolute right-4 bottom-[calc(var(--spacing-bottom-nav)+var(--spacing-venue-sheet)+16px)] z-10 flex size-11 items-center justify-center rounded-full bg-white text-primary shadow-[0_0_2px_0_rgb(0_0_0/0.4)] outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
       >
         <LocateFixed size={24} strokeWidth={2} aria-hidden />

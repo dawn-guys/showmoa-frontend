@@ -10,7 +10,7 @@ const TEAM = [
   { name: "곽다윗", url: "https://github.com/lakesole" },
   { name: "양덕관", url: "https://github.com/isle-blu" },
   { name: "이준호", url: "https://github.com/JUNHORANG" },
-  { name: "정준영", url: "https://github.com/jangabc3" },
+  { name: "장준영", url: "https://github.com/jangabc3" },
 ] as const;
 
 // show moa 오가니제이션 레포 목록
