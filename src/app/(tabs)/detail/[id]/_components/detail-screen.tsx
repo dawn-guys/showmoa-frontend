@@ -59,7 +59,7 @@ export function DetailScreen({ id }: DetailScreenProps) {
   const router = useRouter();
   const { isLoggedIn, isLoading: authLoading } = useAuth();
   const { data: detail, isLoading, isError } = usePerformanceDetail(id);
-  // 계약에 없는 필드(지번 주소·건물명·지도 딥링크 id)는 목업으로 채운다.
+  // 계약에 없는 필드(지번 주소·건물명)는 목업으로 채운다.
   const blocked = useBlockedDetailFields();
   const { add, remove, isPending: isToggling } = useToggleWishlist();
   // 좋아요 "추가" 성공 시에만 재생할 하트 버스트.
@@ -187,7 +187,6 @@ export function DetailScreen({ id }: DetailScreenProps) {
           theatre={detail.theatre}
           jibunAddress={blocked.jibunAddress}
           buildingName={blocked.buildingName}
-          venueId={blocked.venueId}
           onCopyAddress={handleCopyAddress}
         />
       </main>

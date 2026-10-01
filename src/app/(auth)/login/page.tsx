@@ -131,7 +131,10 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
         </button>
       </header>
 
-      <main className="flex flex-1 flex-col px-4">
+      {/* 로고~안내 문구를 세로 중앙에 둔다. 위쪽(헤더 68px + 로고 위 여백 72px)과
+          같은 140px를 아래에도 확보해 화면 전체 기준으로 대칭을 맞추고,
+          화면이 낮아도 안내 문구가 바닥에 붙지 않게 한다. */}
+      <main className="flex flex-1 flex-col justify-center px-4 pb-35">
         <h1 className="sr-only">로그인</h1>
 
         {/* 로고를 누르면 홈으로 이동한다(헤더와 동일 패턴). */}

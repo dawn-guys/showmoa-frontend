@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQueryState } from "nuqs";
+import { parseAsFloat, useQueryState } from "nuqs";
 import { AnimatedToast } from "@/shared/components/toast";
 import { LoadingSpinner } from "@/shared/components/loading-spinner";
 import type {
@@ -55,8 +55,15 @@ export function MapScreen() {
   } = useTheatres(bounds);
   const { searchTheatres, isSearching } = useTheatreSearch();
 
-  // 디테일 화살표 딥링크로 넘어온 극장 id(?venueId=). 극장 id는 숫자라 문자열로 비교한다.
-  const [venueIdParam] = useQueryState("venueId");
+  // 디테일 화살표 딥링크로 넘어온 공연장 좌표(?lat=&lng=). 둘 다 있을 때만 딥링크로 본다.
+  // 이 좌표를 지도 초기 중심으로 쓰면, 그 범위 조회의 최근접(nearest) 극장이 곧
+  // 그 공연장이라 아래 최초 포커스가 그대로 그 공연장을 잡는다.
+  const [deepLinkLat] = useQueryState("lat", parseAsFloat);
+  const [deepLinkLng] = useQueryState("lng", parseAsFloat);
+  const deepLinkCenter =
+    deepLinkLat !== null && deepLinkLng !== null
+      ? { lat: deepLinkLat, lng: deepLinkLng }
+      : null;
 
   const mapViewRef = useRef<MapViewHandle>(null);
   const [mapStatus, setMapStatus] = useState<MapStatus>("loading");
@@ -94,20 +101,20 @@ export function MapScreen() {
   // GPS 안내 모달(위치 권한이 막혀 현재 위치를 못 가져올 때). URL 플래그로 둬 뒤로가기가 쌓이지 않는다.
   const [gpsModalOpen, setGpsModalOpen] = useOverlayFlag("gps");
 
-  // 딥링크 극장으로의 최초 이동을 한 번만 수행하기 위한 플래그.
-  const didFocusTheatreRef = useRef(false);
   // 진입 시 현재 위치 이동을 한 번만 수행하기 위한 플래그.
   const didEntryLocateRef = useRef(false);
 
   /**
-   * 진입 시 현재 위치 이동. 권한이 이미 허용돼 있거나(딥링크 극장이 없을 때)
-   * 모달에서 동의하면 요청하며, 위치 조회가 끝날 때까지 스켈레톤을 덮는다.
-   * 이동에 성공하면 새 위치의 극장 목록이 올 때까지도 스켈레톤을 유지한다.
+   * 진입 시 현재 위치 이동. 권한이 이미 허용돼 있거나 모달에서 동의하면 요청하며,
+   * 위치 조회가 끝날 때까지 스켈레톤을 덮는다. 이동에 성공하면 새 위치의 극장
+   * 목록이 올 때까지도 스켈레톤을 유지한다.
+   * 딥링크로 들어오면 초기 위치(공연장 좌표)가 있으므로 현재 위치로 옮기지 않고,
+   * 동의 모달도 띄우지 않는다(아래 LocationConsentModal).
    */
   const [agreed, setAgreed] = useState(false);
   const [entryLocateDone, setEntryLocateDone] = useState(false);
   const [awaitingLocatedList, setAwaitingLocatedList] = useState(false);
-  const wantsEntryLocate = (isGranted && !venueIdParam) || agreed;
+  const wantsEntryLocate = !deepLinkCenter && (isGranted || agreed);
   const isEntryLocating = isChecking || (wantsEntryLocate && !entryLocateDone);
 
   const theatreList = theatres ?? EMPTY_THEATRES;
@@ -118,19 +125,14 @@ export function MapScreen() {
   }
 
   // 최초 포커스: 위치 이동이 없거나 실패한 경우를 위해 첫 목록의 최근접 극장
-  // (딥링크면 그 극장)으로 1회 포커스한다. 위치 이동이 성공하면 아래 이동 포커스가
-  // 그 범위 최근접으로 다시 잡는다(진입 자동 이동은 스켈레톤이 덮는 동안 교체).
-  // effect가 아니라 렌더 중 상태 조정이라 추가 커밋 없이 곧바로 반영된다.
+  // (딥링크면 지도 중심이 공연장 좌표라 그 공연장)으로 1회 포커스한다. 위치 이동이
+  // 성공하면 아래 이동 포커스가 그 범위 최근접으로 다시 잡는다(진입 자동 이동은
+  // 스켈레톤이 덮는 동안 교체). effect가 아니라 렌더 중 상태 조정이라 추가 커밋
+  // 없이 곧바로 반영된다.
   if (!didInitialFocus && theatreList.length > 0) {
-    const fromDeepLink = venueIdParam
-      ? theatreList.find((theatre) => String(theatre.id) === venueIdParam)
-      : undefined;
     setDidInitialFocus(true);
     setFocusedTheatre(
-      fromDeepLink ??
-        theatreList.find((theatre) => theatre.nearest) ??
-        theatreList[0] ??
-        null,
+      theatreList.find((theatre) => theatre.nearest) ?? theatreList[0] ?? null,
     );
   }
 
@@ -148,19 +150,6 @@ export function MapScreen() {
 
   const { data: performances, isLoading: performancesLoading } =
     useTheatrePerformances(focusedTheatreId);
-
-  // 지도가 준비되고 목록이 로드되면 딥링크 극장 위치로 한 번 이동한다(선택 상태는 위에서 파생).
-  useEffect(() => {
-    if (didFocusTheatreRef.current || mapStatus !== "ready" || !venueIdParam) {
-      return;
-    }
-    const target = theatreList.find(
-      (theatre) => String(theatre.id) === venueIdParam,
-    );
-    if (!target) return;
-    didFocusTheatreRef.current = true;
-    mapViewRef.current?.panToTheatre(target);
-  }, [mapStatus, venueIdParam, theatreList]);
 
   // 지도가 준비되면 진입 시 현재 위치 이동을 한 번 수행한다. 스켈레톤이 덮고
   // 있으므로 애니메이션 없이 바로 옮긴다. 실패(거부·시간 초과 등)하면 기본 중심을 유지한다.
@@ -327,6 +316,7 @@ export function MapScreen() {
         onStatusChange={setMapStatus}
         onBoundsChange={setBounds}
         onLocate={handleLocate}
+        initialCenter={deepLinkCenter}
       />
 
       {/* 첫 로드·검색 중에는 스켈레톤을 지도 위에 얹는다. */}
@@ -380,7 +370,8 @@ export function MapScreen() {
 
       {/* 위치 권한 미결정(또는 확인 불가) 시 위치 정보 동의 모달 */}
       <LocationConsentModal
-        open={shouldPrompt}
+        // 딥링크 진입은 초기 위치가 정해져 있어 위치 동의를 묻지 않는다.
+        open={shouldPrompt && !deepLinkCenter}
         onAgree={handleAgree}
         onDecline={handleDecline}
       />
