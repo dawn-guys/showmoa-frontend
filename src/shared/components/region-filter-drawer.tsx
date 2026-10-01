@@ -60,7 +60,7 @@ function RegionColumn({
       // 고정하지 않고 내용(글자+padding)에 맞춰 늘어나므로 긴 지역명도
       // 잘리지 않는다. 왼쪽부터 채우고 나머지 공간은 비운다.
       className={cn(
-        "h-full w-fit shrink-0 overflow-y-auto overscroll-contain py-2",
+        "h-full w-fit shrink-0 overflow-y-auto overscroll-contain py-4",
         "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
@@ -76,7 +76,7 @@ function RegionColumn({
             disabled={isFull && !isSelected}
             onClick={() => onSelect(name)}
             className={cn(
-              "flex min-h-11 w-full items-center px-4 text-left text-sm leading-tight break-keep transition-colors outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40",
+              "flex min-h-11 w-full items-center px-6 text-left text-sm leading-tight break-keep transition-colors outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40",
               isSelected ? "font-medium text-primary" : "text-muted-foreground",
             )}
           >

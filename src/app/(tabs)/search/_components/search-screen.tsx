@@ -2,17 +2,11 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  parseAsNativeArrayOf,
-  parseAsString,
-  parseAsStringLiteral,
-  useQueryState,
-} from "nuqs";
 import { Header } from "@/app/_components/header";
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
 import { RegionFilterDrawer } from "@/shared/components/region-filter-drawer";
-import { GENRE_CATEGORIES } from "@/shared/constants/genre";
-import { MAX_DISTRICTS, sidoLabel } from "@/shared/constants/region";
+import type { GenreCategory } from "@/shared/constants/genre";
+import { sidoLabel } from "@/shared/constants/region";
 import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
 import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import { useAreas } from "../_hooks/useAreas";
@@ -46,27 +40,13 @@ export function SearchScreen() {
   // 디바운스가 끝난 뒤 확정되는 검색어. 결과 목록은 이 값으로 계산한다.
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  // 적용된 필터. 새로고침·뒤로가기에도 유지되도록 URL에 저장한다.
-  // 검색 API와 같은 이름의 반복 키(?genres=연극&genres=뮤지컬)로 싣는다.
-  // 빈 배열이 기본값("전체"·지역 없음)이라 비면 URL에서도 빠진다.
-  const [genresParam, setGenres] = useQueryState(
-    "genres",
-    parseAsNativeArrayOf(parseAsStringLiteral(GENRE_CATEGORIES)),
-  );
+  // 적용된 필터. 검색 조건은 화면 상태로만 들고 URL·히스토리에는 싣지 않는다.
+  // 빈 배열이 기본값("전체"·지역 없음)이다. 개수 규칙(장르 2·시/도 1·구/군 3)은
+  // 필터 시트·드로워가 지킨다.
+  const [genres, setGenres] = useState<GenreCategory[]>([]);
   // 시/도는 단일 선택이라 배열이지만 원소는 최대 1개다.
-  const [areasParam, setAreas] = useQueryState(
-    "areas",
-    parseAsNativeArrayOf(parseAsString),
-  );
-  const [districtsParam, setDistricts] = useQueryState(
-    "districts",
-    parseAsNativeArrayOf(parseAsString),
-  );
-
-  // URL을 직접 고쳐 개수를 넘겨도 선택 규칙(장르 2·시/도 1·구/군 3)을 지킨다.
-  const genres = genresParam.slice(0, MAX_GENRES);
-  const areas = areasParam.slice(0, 1);
-  const districts = districtsParam.slice(0, MAX_DISTRICTS);
+  const [areas, setAreas] = useState<string[]>([]);
+  const [districts, setDistricts] = useState<string[]>([]);
 
   // 장르 필터 바텀 시트·지역 필터 드로워 열림 상태(공통 훅으로 히스토리 미누적).
   const [filterOpen, setFilterOpen] = useOverlayFlag("filter");
@@ -74,7 +54,7 @@ export function SearchScreen() {
 
   // 적용된 필터 칩 라벨. 장르끼리, 지역(시/도·구/군)끼리 공백으로 이어 한 라벨로 만들고
   // 칩은 장르와 지역 사이에만 점(·)을 둔다. "전체"·빈 지역은 빈 문자열이라 칩에 넣지 않는다.
-  // 시/도는 URL에 API 값으로 저장돼 있어 칩에는 스펙 표기로 바꿔 보여준다.
+  // 시/도는 API 값으로 들고 있어 칩에는 스펙 표기로 바꿔 보여준다.
   const chipLabels = [
     genres.join(" "),
     [...areas.map(sidoLabel), ...districts].join(" "),

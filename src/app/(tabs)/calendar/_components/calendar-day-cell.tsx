@@ -9,8 +9,8 @@ interface CalendarDayCellProps {
   date: Date;
   /** 표시 중인 달에 속한 날짜인지. false면 흐리게 처리하고 누를 수 없다. */
   isCurrentMonth: boolean;
-  /** 오늘인지. 날짜 숫자를 주조색으로 강조한다. */
-  isToday: boolean;
+  /** 선택된 날짜인지. 날짜 숫자를 주조색으로 강조한다. */
+  isSelected: boolean;
   /** 이 날짜에 열리는 공연 목록 */
   performances: WishlistCalendarResponse[];
   /** 셀을 눌렀을 때(당월 날짜만). 해당 날짜의 공연 바텀 시트를 연다. */
@@ -71,7 +71,7 @@ function DayCard({
 export function CalendarDayCell({
   date,
   isCurrentMonth,
-  isToday,
+  isSelected,
   performances,
   onSelect,
 }: CalendarDayCellProps) {
@@ -94,12 +94,14 @@ export function CalendarDayCell({
       type="button"
       onClick={() => onSelect(date)}
       aria-label={`${format(date, "M월 d일")}, 공연 ${performances.length}건`}
+      // 선택 상태를 색만으로 전달하지 않도록 보조기기에도 알린다.
+      aria-current={isSelected ? "date" : undefined}
       className="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-[2px] px-0.5 outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:opacity-80"
     >
       <span
         className={cn(
           "flex h-5.5 w-max items-center justify-center text-body2 font-semibold",
-          isToday ? "text-primary" : "text-[#bfbfbf]",
+          isSelected ? "text-primary" : "text-[#bfbfbf]",
         )}
       >
         {dayNumber}
