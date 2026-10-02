@@ -33,14 +33,14 @@ export function SiteFooter() {
           <button
             type="button"
             onClick={() => setPolicy("privacy")}
-            className="rounded-sm px-3 py-2 text-sm font-medium text-hint outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-foreground"
+            className="cursor-pointer rounded-sm px-3 py-2 text-sm font-medium text-hint outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-foreground"
           >
             개인 정보 처리 방침
           </button>
           <button
             type="button"
             onClick={() => setPolicy("location")}
-            className="rounded-sm px-3 py-2 text-sm font-medium text-hint outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-foreground"
+            className="cursor-pointer rounded-sm px-3 py-2 text-sm font-medium text-hint outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-foreground"
           >
             위치 정보 서비스 이용 약관
           </button>
