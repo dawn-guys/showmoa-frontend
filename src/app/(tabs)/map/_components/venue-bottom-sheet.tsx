@@ -174,10 +174,12 @@ export function VenueBottomSheet({
 
           {/* 공연 목록. 스크롤바 UI는 숨기되 부드럽게 스크롤된다. */}
           {isLoading ? (
+            // 시트 높이를 넘는 스켈레톤이 아래로 새어 하단 나브 위에 그려지지 않도록
+            // 목록(ul)과 같이 남은 높이만 차지하고 넘치는 부분은 잘라낸다.
             <div
               aria-busy="true"
               aria-label="공연 목록을 불러오는 중"
-              className="flex flex-col gap-4 px-4 pt-1"
+              className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pt-1"
             >
               {Array.from({ length: 2 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3">

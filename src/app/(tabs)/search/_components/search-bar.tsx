@@ -99,7 +99,7 @@ export function SearchBar({
           aria-label="검색"
           className="flex size-12 shrink-0 items-center justify-center rounded-l-[3px] text-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:text-primary"
         >
-          <Search size={18} />
+          <Search size={24} />
         </button>
         <input
           ref={inputRef}
