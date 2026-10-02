@@ -189,10 +189,17 @@ export function SearchScreen() {
         onOpenChange={setRegionOpen}
         areas={areaList ?? []}
         isPending={isAreasPending}
+        // 다시 열었을 때 적용된 지역이 선택된 상태로 보이도록 넘긴다.
+        value={areas[0] ? { sido: areas[0], districts } : null}
         onApply={({ sido, districts }) => {
           // 시/도와 구/군은 한 쌍이라 함께 갈아 끼운다.
           setAreas([sido]);
           setDistricts(districts);
+        }}
+        onReset={() => {
+          // 지역 필터를 해제한다(URL에서 areas·districts가 빠진다).
+          setAreas(null);
+          setDistricts(null);
         }}
       />
     </div>
