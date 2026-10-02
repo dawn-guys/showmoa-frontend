@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, Search } from "lucide-react";
+import { CloseCircleOutlineIcon } from "@solar-icons/react";
 
 interface SearchBarProps {
   /** 검색 모드(포커스) 여부. 켜지면 앞에 뒤로가기 화살표가 나타난다. */
@@ -49,6 +50,13 @@ export function SearchBar({
     onSubmit();
   };
 
+  // 지우기: 값만 비우고 포커스는 인풋에 남긴다(검색 모드 유지). 값이 바뀌면
+  // 디바운스로 결과가 다시 계산되는 기존 동작을 그대로 따른다.
+  const handleClear = () => {
+    onChange("");
+    inputRef.current?.focus();
+  };
+
   return (
     <motion.form
       layout
@@ -79,12 +87,20 @@ export function SearchBar({
       </AnimatePresence>
 
       {/* 인풋. 포커스가 들어가면 테두리를 주조색으로 강조하고 검색 모드로 진입한다.
-          돋보기는 오른쪽 끝에 두고 검색을 실행하는 제출 버튼으로 동작한다. */}
+          돋보기는 왼쪽 끝에 두고 검색을 실행하는 제출 버튼으로 동작하며, 값이
+          있을 때만 오른쪽에 지우기 버튼이 나타난다. */}
       <motion.div
         layout
         transition={TRANSITION}
         className="group flex h-12 min-w-0 flex-1 items-center rounded-[5px] border-2 border-[#292929] bg-[#2C2C2E] transition-colors focus-within:border-primary"
       >
+        <button
+          type="submit"
+          aria-label="검색"
+          className="flex size-12 shrink-0 items-center justify-center rounded-l-[3px] text-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:text-primary"
+        >
+          <Search size={18} />
+        </button>
         <input
           ref={inputRef}
           type="search"
@@ -95,15 +111,18 @@ export function SearchBar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={onActivate}
-          className="min-w-0 flex-1 bg-transparent pr-2 pl-4 text-base font-medium text-foreground outline-none placeholder:text-placeholder [&::-webkit-search-cancel-button]:appearance-none"
+          className="min-w-0 flex-1 bg-transparent px-1 text-base font-medium text-foreground outline-none placeholder:text-placeholder [&::-webkit-search-cancel-button]:appearance-none"
         />
-        <button
-          type="submit"
-          aria-label="검색"
-          className="flex size-12 shrink-0 items-center justify-center rounded-[3px] text-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring active:text-primary"
-        >
-          <Search size={18} />
-        </button>
+        {value && (
+          <button
+            type="button"
+            aria-label="검색어 지우기"
+            onClick={handleClear}
+            className="flex size-12 shrink-0 items-center justify-center rounded-r-[3px] text-muted-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <CloseCircleOutlineIcon size={24} />
+          </button>
+        )}
       </motion.div>
     </motion.form>
   );

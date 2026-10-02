@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Search } from "lucide-react";
+import { CloseCircleOutlineIcon } from "@solar-icons/react";
 import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
 
 interface WishlistSearchProps {
@@ -19,6 +20,7 @@ const DEBOUNCE_MS = 300;
  */
 export function WishlistSearch({ onSearch }: WishlistSearchProps) {
   const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const search = useDebouncedCallback(onSearch, DEBOUNCE_MS);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,6 +34,15 @@ export function WishlistSearch({ onSearch }: WishlistSearchProps) {
     e.preventDefault();
     search.cancel();
     onSearch(value.trim());
+  };
+
+  // 지우기: 값을 비우고 대기 중인 디바운스를 취소한 뒤 즉시 전체 목록으로
+  // 되돌린다(제출과 같은 즉시 반영). 포커스는 인풋에 남긴다.
+  const handleClear = () => {
+    setValue("");
+    search.cancel();
+    onSearch("");
+    inputRef.current?.focus();
   };
 
   return (
@@ -49,6 +60,7 @@ export function WishlistSearch({ onSearch }: WishlistSearchProps) {
         <Search size={18} />
       </button>
       <input
+        ref={inputRef}
         type="search"
         inputMode="search"
         enterKeyHint="search"
@@ -56,8 +68,19 @@ export function WishlistSearch({ onSearch }: WishlistSearchProps) {
         placeholder="공연 제목을 검색해 주세요"
         value={value}
         onChange={handleChange}
-        className="min-w-0 flex-1 bg-transparent pr-3 text-base font-medium text-foreground outline-none placeholder:text-disabled [&::-webkit-search-cancel-button]:appearance-none"
+        className="min-w-0 flex-1 bg-transparent pr-1 text-base font-medium text-foreground outline-none placeholder:text-disabled [&::-webkit-search-cancel-button]:appearance-none"
       />
+      {/* 지우기: 값이 있을 때만 오른쪽에 노출. 누르면 값을 비우고 포커스 유지. */}
+      {value && (
+        <button
+          type="button"
+          aria-label="검색어 지우기"
+          onClick={handleClear}
+          className="flex size-[42px] shrink-0 items-center justify-center rounded-r-[5px] text-muted-foreground outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <CloseCircleOutlineIcon size={24} />
+        </button>
+      )}
     </form>
   );
 }

@@ -23,12 +23,13 @@ export function LoadingSpinner({
   label = "로딩 중",
   className,
 }: LoadingSpinnerProps) {
+  // isolate: 원들의 z-index가 스피너 밖(하단 나브 등)으로 새지 않도록 쌓임 맥락을 가둔다.
   return (
     <span
       role="status"
       aria-label={label}
       className={cn(
-        "relative inline-flex size-12.5 items-center justify-center",
+        "relative isolate inline-flex size-12.5 items-center justify-center",
         className,
       )}
     >
