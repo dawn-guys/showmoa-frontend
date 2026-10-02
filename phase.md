@@ -108,7 +108,10 @@ Contract conventions:
 
 - Cache time, retries, prefetching, and other server state tuning (Phase 3)
 - Performance optimization (Phase 3), PWA setup
-- Account deletion (DELETE /api/users/me): no screen exists
+- Account deletion (DELETE /api/users/me): now in scope and wired on the
+  /setting/withdraw screen (password confirm + confirm modal + failure toast).
+  The failure path is verified; the actual deletion (success path) is not run
+  because it is irreversible. Tracked under I.
 - New features, screen changes, or markup changes beyond the data swap
 - BLOCKED items until the backend delivers them
 
@@ -373,6 +376,17 @@ Add a second id that has not started for the D-N badge.
       POST /api/auth/logout (clear tokens even if the request fails);
       hide 비밀번호 변경 if `hasPassword` is false (confirm with me)
 - [ ] Notification: BLOCKED (no endpoint), stays on mocks
+- [ ] Account deletion (/setting/withdraw): wired to DELETE /api/users/me
+      (body { password }) via useWithdraw. CTA → 확인 모달 → 탈퇴 요청; 성공 시
+      로그아웃 라우트로 쿠키 정리 후 "/"로 이동. proxy.ts 가드에 추가함.
+      Failure path verified against the real backend (account id 5): a wrong
+      password returns 400 invalid-current-password → 에러 테두리 + 실패 횟수
+      토스트, and the account survives. The success path (an actual deletion)
+      has NOT been run — it is irreversible, so it waits on the owner.
+      Open items: no docs/spec document; Figma-unconfirmed modal title
+      (임시 "회원 탈퇴"); no entry point from /setting; success redirect
+      target ("/") unconfirmed; the "5회" copy implies a lockout the backend
+      does not enforce (it 400s every attempt).
 
 ### J. Social login (/login)
 

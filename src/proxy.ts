@@ -22,5 +22,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/notification", "/password/update"],
+  matcher: ["/notification", "/password/update", "/setting/withdraw"],
 };
