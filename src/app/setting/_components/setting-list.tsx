@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
@@ -15,6 +16,7 @@ import {
   overlayUrlOptions,
   useOverlayFlag,
 } from "@/shared/hooks/useOverlayFlag";
+import type { UserResponse } from "@/shared/types/auth";
 import { SettingRow } from "./setting-row";
 
 /**
@@ -31,17 +33,25 @@ export function SettingList() {
   const [logoutOpen, setLogoutOpen] = useOverlayFlag("logout");
 
   // 헤더와 동일하게 useAuth로 로그인 여부를 판별한다(세션 확인 중 깜빡임 방지).
-  const { user, isLoggedIn, isLoading } = useAuth();
+  const { user: currentUser, isLoggedIn, isLoading } = useAuth();
   const { logout } = useLogout();
 
+  // 로그아웃 후 홈으로 떠나는 동안 붙잡아 둔 사용자. 훅이 사용자 쿼리를 홈 이동보다
+  // 먼저 비우므로, 그 사이 비로그인 화면이 깜빡이지 않게 계정 섹션을 그대로 유지한다.
+  const [leavingUser, setLeavingUser] = useState<UserResponse | null>(null);
+  const user = leavingUser ?? currentUser;
+  const showAccount = leavingUser !== null || isLoggedIn;
+
   const handleLogout = async () => {
+    setLeavingUser(currentUser);
     try {
       await logout();
     } catch {
       // 요청이 실패해도 라우트 핸들러가 쿠키를 지우고, 훅이 사용자 쿼리를 비운다.
       // 로그아웃을 못 하는 상태에 갇히지 않도록 그대로 홈으로 보낸다.
     }
-    router.push("/");
+    // 뒤로가기로 로그아웃한 설정 화면에 돌아오지 않도록 replace로 이동한다.
+    router.replace("/");
   };
 
   return (
@@ -64,7 +74,7 @@ export function SettingList() {
                   <Skeleton className="h-5 w-16" aria-hidden />
                 </div>
               </>
-            ) : isLoggedIn ? (
+            ) : showAccount ? (
               <>
                 {/* 로그인한 본인 계정(이메일). 클릭 동작 없는 표시 항목이다. */}
                 <p className="flex min-h-11 items-center text-body1 font-[300] [overflow-wrap:anywhere] text-foreground">
