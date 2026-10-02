@@ -139,29 +139,34 @@ export function SearchScreen() {
       <main className="relative z-10 flex flex-col gap-4 bg-background px-4 pt-5 pb-safe-nav">
         {/* 화면의 대표 제목. 디자인상 노출되지 않아 보조기기 전용으로 둔다. */}
         <h1 className="sr-only">공연 검색</h1>
-        <SearchBar
-          active={active}
-          onActivate={() => setActive(true)}
-          onDeactivate={() => setActive(false)}
-          value={query}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-        />
+        {/* 검색창(검색 모드에서는 적용된 필터 칩까지)은 결과를 아래로 스크롤해도
+            화면 상단에 붙어 있게 한다. main의 위 여백(pt-5)과 아래 간격 일부(pb-3)를
+            배경으로 덮어, 붙었을 때 결과가 위·아래로 비치지 않게 하고 원래 간격은
+            음수 마진으로 유지한다. */}
+        <div className="sticky top-0 z-10 -mx-4 -mt-5 -mb-3 flex flex-col gap-4 bg-background px-4 pt-5 pb-3">
+          <SearchBar
+            active={active}
+            onActivate={() => setActive(true)}
+            onDeactivate={() => setActive(false)}
+            value={query}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+          />
+          {active && chipLabels.length > 0 && (
+            <SearchFilterChip labels={chipLabels} className="self-start" />
+          )}
+        </div>
 
         {active ? (
-          // 검색 모드: 필터 버튼 영역은 감추고 적용된 필터 칩과 결과 목록을 노출한다.
-          <>
-            {chipLabels.length > 0 && (
-              <SearchFilterChip labels={chipLabels} className="self-start" />
-            )}
-            <SearchResultList
-              results={results}
-              isLoading={isLoading}
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              onLoadMore={fetchNextPage}
-            />
-          </>
+          // 검색 모드: 필터 버튼 영역은 감추고 적용된 필터 칩(위 고정 영역)과
+          // 결과 목록을 노출한다.
+          <SearchResultList
+            results={results}
+            isLoading={isLoading}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            onLoadMore={fetchNextPage}
+          />
         ) : (
           <SearchFilterBar
             chipLabels={chipLabels}

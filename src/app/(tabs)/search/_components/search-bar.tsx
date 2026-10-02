@@ -58,8 +58,11 @@ export function SearchBar({
   };
 
   return (
+    // layoutDependency: 검색창이 상단에 붙은(sticky) 채 다시 렌더링될 때 스크롤로
+    // 바뀐 위치를 레이아웃 변화로 보고 튀지 않도록, active 전환 때만 애니메이션한다.
     <motion.form
       layout
+      layoutDependency={active}
       transition={TRANSITION}
       role="search"
       onSubmit={handleSubmit}
@@ -72,6 +75,7 @@ export function SearchBar({
           <motion.button
             key="back"
             layout
+            layoutDependency={active}
             type="button"
             onClick={handleBack}
             aria-label="검색 닫기"
@@ -91,6 +95,7 @@ export function SearchBar({
           있을 때만 오른쪽에 지우기 버튼이 나타난다. */}
       <motion.div
         layout
+        layoutDependency={active}
         transition={TRANSITION}
         className="group flex h-12 min-w-0 flex-1 items-center rounded-[5px] border-2 border-[#292929] bg-[#2C2C2E] transition-colors focus-within:border-primary"
       >
