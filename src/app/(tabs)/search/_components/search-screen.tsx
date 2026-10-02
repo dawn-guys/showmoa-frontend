@@ -2,11 +2,17 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import {
+  parseAsNativeArrayOf,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
+} from "nuqs";
 import { Header } from "@/app/_components/header";
 import { GenreFilterSheet } from "@/shared/components/genre-filter-sheet";
 import { RegionFilterDrawer } from "@/shared/components/region-filter-drawer";
-import type { GenreCategory } from "@/shared/constants/genre";
-import { sidoLabel } from "@/shared/constants/region";
+import { GENRE_CATEGORIES } from "@/shared/constants/genre";
+import { MAX_DISTRICTS, sidoLabel } from "@/shared/constants/region";
 import { useDebouncedCallback } from "@/shared/hooks/useDebouncedCallback";
 import { useOverlayFlag } from "@/shared/hooks/useOverlayFlag";
 import { useAreas } from "../_hooks/useAreas";
@@ -33,20 +39,41 @@ const TRANSITION = { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as const;
  * 필터를 공연 검색 API에 보내 결과 목록으로 보여준다.
  */
 export function SearchScreen() {
-  // 검색 모드(포커스) 여부. 인풋 포커스로 진입, 뒤로가기 화살표로 이탈한다.
-  const [active, setActive] = useState(false);
-  // 인풋에 입력 중인 검색어(제어 컴포넌트).
-  const [query, setQuery] = useState("");
+  // 검색 조건(확정된 검색어·장르·지역)은 URL에 저장한다. 상세로 갔다가 뒤로
+  // 돌아오거나 새로고침해도 조건이 남고, 같은 조건이라 결과도 React Query
+  // 캐시에서 그대로 복원된다. 검색 API와 같은 이름의 키로 싣고
+  // (?keyword=햄릿&genres=연극&genres=뮤지컬), 기본값(빈 값)이면 URL에서 빠진다.
+  // nuqs 기본 history(replace)라 입력·필터 변경이 뒤로가기 스택에 쌓이지 않는다.
+  //
   // 디바운스가 끝난 뒤 확정되는 검색어. 결과 목록은 이 값으로 계산한다.
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useQueryState(
+    "keyword",
+    parseAsString.withDefault(""),
+  );
+  // 인풋에 입력 중인 검색어(제어 컴포넌트). 돌아왔을 때 URL의 검색어로 시작한다.
+  const [query, setQuery] = useState(debouncedQuery);
+  // 검색 모드(포커스) 여부. 인풋 포커스로 진입, 뒤로가기 화살표로 이탈한다.
+  // URL에 검색어가 있으면(결과를 보다가 돌아온 경우) 검색 모드로 시작한다.
+  const [active, setActive] = useState(debouncedQuery !== "");
 
-  // 적용된 필터. 검색 조건은 화면 상태로만 들고 URL·히스토리에는 싣지 않는다.
-  // 빈 배열이 기본값("전체"·지역 없음)이다. 개수 규칙(장르 2·시/도 1·구/군 3)은
-  // 필터 시트·드로워가 지킨다.
-  const [genres, setGenres] = useState<GenreCategory[]>([]);
+  const [genresParam, setGenres] = useQueryState(
+    "genres",
+    parseAsNativeArrayOf(parseAsStringLiteral(GENRE_CATEGORIES)),
+  );
   // 시/도는 단일 선택이라 배열이지만 원소는 최대 1개다.
-  const [areas, setAreas] = useState<string[]>([]);
-  const [districts, setDistricts] = useState<string[]>([]);
+  const [areasParam, setAreas] = useQueryState(
+    "areas",
+    parseAsNativeArrayOf(parseAsString),
+  );
+  const [districtsParam, setDistricts] = useQueryState(
+    "districts",
+    parseAsNativeArrayOf(parseAsString),
+  );
+
+  // URL을 직접 고쳐 개수를 넘겨도 선택 규칙(장르 2·시/도 1·구/군 3)을 지킨다.
+  const genres = genresParam.slice(0, MAX_GENRES);
+  const areas = areasParam.slice(0, 1);
+  const districts = districtsParam.slice(0, MAX_DISTRICTS);
 
   // 장르 필터 바텀 시트·지역 필터 드로워 열림 상태(공통 훅으로 히스토리 미누적).
   const [filterOpen, setFilterOpen] = useOverlayFlag("filter");
@@ -112,29 +139,34 @@ export function SearchScreen() {
       <main className="relative z-10 flex flex-col gap-4 bg-background px-4 pt-5 pb-safe-nav">
         {/* 화면의 대표 제목. 디자인상 노출되지 않아 보조기기 전용으로 둔다. */}
         <h1 className="sr-only">공연 검색</h1>
-        <SearchBar
-          active={active}
-          onActivate={() => setActive(true)}
-          onDeactivate={() => setActive(false)}
-          value={query}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-        />
+        {/* 검색창(검색 모드에서는 적용된 필터 칩까지)은 결과를 아래로 스크롤해도
+            화면 상단에 붙어 있게 한다. main의 위 여백(pt-5)과 아래 간격 일부(pb-3)를
+            배경으로 덮어, 붙었을 때 결과가 위·아래로 비치지 않게 하고 원래 간격은
+            음수 마진으로 유지한다. */}
+        <div className="sticky top-0 z-10 -mx-4 -mt-5 -mb-3 flex flex-col gap-4 bg-background px-4 pt-5 pb-3">
+          <SearchBar
+            active={active}
+            onActivate={() => setActive(true)}
+            onDeactivate={() => setActive(false)}
+            value={query}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+          />
+          {active && chipLabels.length > 0 && (
+            <SearchFilterChip labels={chipLabels} className="self-start" />
+          )}
+        </div>
 
         {active ? (
-          // 검색 모드: 필터 버튼 영역은 감추고 적용된 필터 칩과 결과 목록을 노출한다.
-          <>
-            {chipLabels.length > 0 && (
-              <SearchFilterChip labels={chipLabels} className="self-start" />
-            )}
-            <SearchResultList
-              results={results}
-              isLoading={isLoading}
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              onLoadMore={fetchNextPage}
-            />
-          </>
+          // 검색 모드: 필터 버튼 영역은 감추고 적용된 필터 칩(위 고정 영역)과
+          // 결과 목록을 노출한다.
+          <SearchResultList
+            results={results}
+            isLoading={isLoading}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            onLoadMore={fetchNextPage}
+          />
         ) : (
           <SearchFilterBar
             chipLabels={chipLabels}
@@ -157,10 +189,17 @@ export function SearchScreen() {
         onOpenChange={setRegionOpen}
         areas={areaList ?? []}
         isPending={isAreasPending}
+        // 다시 열었을 때 적용된 지역이 선택된 상태로 보이도록 넘긴다.
+        value={areas[0] ? { sido: areas[0], districts } : null}
         onApply={({ sido, districts }) => {
           // 시/도와 구/군은 한 쌍이라 함께 갈아 끼운다.
           setAreas([sido]);
           setDistricts(districts);
+        }}
+        onReset={() => {
+          // 지역 필터를 해제한다(URL에서 areas·districts가 빠진다).
+          setAreas(null);
+          setDistricts(null);
         }}
       />
     </div>

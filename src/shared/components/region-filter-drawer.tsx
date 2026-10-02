@@ -23,8 +23,12 @@ interface RegionFilterDrawerProps {
   areas: AreaResponse[];
   /** 지역 목록 조회 중 여부 */
   isPending: boolean;
+  /** 현재 적용된 필터. 드로워를 열 때 이 값이 선택된 상태로 시작한다. 없으면 null. */
+  value: RegionFilter | null;
   /** 저장 버튼으로 선택한 시/도·구/군을 적용한다. */
   onApply: (filter: RegionFilter) => void;
+  /** "전체"를 눌러 적용된 지역 필터를 해제한다. */
+  onReset: () => void;
 }
 
 /**
@@ -39,6 +43,7 @@ function RegionColumn({
   isFull = false,
   getLabel = (name) => name,
   className,
+  children,
 }: {
   label: string;
   /** 항목 값(전송·비교에 쓰는 API 값). */
@@ -50,6 +55,8 @@ function RegionColumn({
   /** 값을 화면 표기로 바꾼다. 기본은 값 그대로. */
   getLabel?: (name: string) => string;
   className?: string;
+  /** 목록 맨 위에 두는 추가 요소(예: "전체" 버튼). */
+  children?: React.ReactNode;
 }) {
   return (
     <div
@@ -64,6 +71,7 @@ function RegionColumn({
         className,
       )}
     >
+      {children}
       {list.map((name) => {
         const isSelected = selected.includes(name);
 
@@ -88,20 +96,25 @@ function RegionColumn({
 }
 
 /**
- * 드로워 본문. 드로워가 닫히면 언마운트되어 선택이 초기화되므로,
- * 열 때마다 안내 문구 상태에서 다시 시작한다.
+ * 드로워 본문. 드로워가 닫히면 언마운트되므로, 열 때마다 적용된 필터(value)에서
+ * 다시 시작한다. 저장하지 않고 닫으면 그동안 바꾼 선택은 버려진다.
+ * 적용된 필터가 없으면 안내 문구 상태에서 시작한다.
  */
 function RegionFilterDrawerBody({
   areas,
   isPending,
+  value,
   onApply,
+  onReset,
 }: {
   areas: AreaResponse[];
   isPending: boolean;
+  value: RegionFilter | null;
   onApply: (filter: RegionFilter) => void;
+  onReset: () => void;
 }) {
   // 시/도(단일) → 구/군(다중) 선택 상태. API가 두 단계만 내려주므로 열도 두 개다.
-  const [selected, setSelected] = useState<RegionFilter | null>(null);
+  const [selected, setSelected] = useState<RegionFilter | null>(value);
 
   const districts =
     areas.find((area) => area.sido === selected?.sido)?.districts ?? [];
@@ -158,7 +171,27 @@ function RegionFilterDrawerBody({
               // 전송은 API 값(서울)으로 하고 화면에는 스펙 표기(서울특별시)를 쓴다.
               getLabel={sidoLabel}
               className="border-r border-border"
-            />
+            >
+              {/* 전체: 지역으로 거르지 않는 상태. 고른 시/도가 없으면 강조된다.
+                  누르면 드로워의 선택을 비우고 적용된 지역 필터도 바로 해제한다
+                  (구/군이 없으면 저장 버튼이 없어 저장을 거치지 않고 즉시 적용한다). */}
+              <button
+                type="button"
+                aria-pressed={selected === null}
+                onClick={() => {
+                  setSelected(null);
+                  onReset();
+                }}
+                className={cn(
+                  "flex min-h-11 w-full items-center px-6 text-left text-sm leading-tight break-keep transition-colors outline-none hover:cursor-pointer focus-visible:ring-2 focus-visible:ring-ring",
+                  selected === null
+                    ? "font-medium text-primary"
+                    : "text-muted-foreground",
+                )}
+              >
+                전체
+              </button>
+            </RegionColumn>
             <RegionColumn
               label="구/시 선택"
               list={districts}
@@ -197,7 +230,9 @@ export function RegionFilterDrawer({
   onOpenChange,
   areas,
   isPending,
+  value,
   onApply,
+  onReset,
 }: RegionFilterDrawerProps) {
   const handleApply = (filter: RegionFilter) => {
     onApply(filter);
@@ -235,7 +270,9 @@ export function RegionFilterDrawer({
           <RegionFilterDrawerBody
             areas={areas}
             isPending={isPending}
+            value={value}
             onApply={handleApply}
+            onReset={onReset}
           />
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
