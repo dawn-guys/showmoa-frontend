@@ -14,6 +14,8 @@ interface MonthGridProps {
   selectedDate: Date;
   /** 이 달의 찜 공연 목록. 날짜별 목록은 셀에서 파생한다. */
   performances: WishlistCalendarResponse[];
+  /** 공휴일 날짜(yyyy-MM-dd). 공휴일에도 공연하는 공연을 거르는 데 쓴다. */
+  holidayDates: ReadonlySet<string>;
   /** 날짜 카드 선택 콜백. 해당 날짜의 공연 바텀 시트를 연다. */
   onSelectDay: (date: Date) => void;
 }
@@ -27,6 +29,7 @@ export function MonthGrid({
   month,
   selectedDate,
   performances,
+  holidayDates,
   onSelectDay,
 }: MonthGridProps) {
   const weeks = buildMonthMatrix(year, month);
@@ -44,7 +47,11 @@ export function MonthGrid({
               date={day}
               isCurrentMonth={day.getMonth() === month}
               isSelected={isSameDay(day, selectedDate)}
-              performances={getPerformancesForDay(performances, day)}
+              performances={getPerformancesForDay(
+                performances,
+                day,
+                holidayDates,
+              )}
               onSelect={onSelectDay}
             />
           ))}

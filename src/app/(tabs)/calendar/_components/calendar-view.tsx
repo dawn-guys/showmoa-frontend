@@ -15,8 +15,14 @@ import {
   useToggleWishlist,
   WISHLIST_ERROR_MESSAGE,
 } from "@/shared/hooks/useToggleWishlist";
+import { useHolidayDates } from "@/shared/hooks/useHolidayDates";
 import type { CalendarViewMode } from "../_types";
-import { getPerformancesForDay, toMonthParam } from "../_lib/calendar";
+import {
+  buildMonthMatrix,
+  getPerformancesForDay,
+  getWeekDays,
+  toMonthParam,
+} from "../_lib/calendar";
 import { useCalendar } from "../_hooks/useCalendar";
 import { CalendarTitleBar } from "./calendar-title-bar";
 import { WeekdayHeader } from "./weekday-header";
@@ -65,6 +71,19 @@ function CalendarLoggedIn() {
   );
   const { data, isLoading, isError } = useCalendar(monthParam);
 
+  // 화면에 보이는 날짜의 연도를 모두 넘겨 공휴일을 받는다. 월간 그리드는 앞뒤
+  // 달 날짜가 섞여 12월 화면에 다음 해 1월이 보일 수 있다. URL로 열린 날짜
+  // 시트의 연도도 함께 넣는다.
+  const visibleDays =
+    viewMode === "week"
+      ? getWeekDays(today)
+      : buildMonthMatrix(year, month).flat();
+  const { holidayDates, isLoading: isHolidayLoading } = useHolidayDates([
+    visibleDays[0].getFullYear(),
+    visibleDays[visibleDays.length - 1].getFullYear(),
+    ...(dayParam ? [parseISO(dayParam).getFullYear()] : []),
+  ]);
+
   // 캘린더에는 찜을 추가하는 동선이 없어 공통 훅에서 remove만 꺼내 쓴다.
   const {
     remove: removeWishlist,
@@ -103,7 +122,7 @@ function CalendarLoggedIn() {
 
   const selectedDay = dayParam ? parseISO(dayParam) : null;
   const selectedDayPerformances = selectedDay
-    ? getPerformancesForDay(performances, selectedDay)
+    ? getPerformancesForDay(performances, selectedDay, holidayDates)
     : [];
 
   return (
@@ -117,7 +136,8 @@ function CalendarLoggedIn() {
         onToggle={handleToggleMode}
       />
 
-      {isLoading ? (
+      {/* 공휴일은 실패해도 빈 값으로 진행하므로 로딩만 함께 기다린다. */}
+      {isLoading || isHolidayLoading ? (
         <>
           <WeekdayHeader today={today} />
           <CalendarSkeleton />
@@ -138,6 +158,7 @@ function CalendarLoggedIn() {
             month={month}
             selectedDate={selectedDate}
             performances={performances}
+            holidayDates={holidayDates}
             onSelectDay={(date) => {
               setBaseDate(date);
               setDayParam(format(date, "yyyy-MM-dd"));
@@ -150,6 +171,7 @@ function CalendarLoggedIn() {
           selectedDate={selectedWeekDate}
           onSelectDate={setSelectedWeekDate}
           performances={performances}
+          holidayDates={holidayDates}
           onRemove={removeWishlist}
         />
       )}
