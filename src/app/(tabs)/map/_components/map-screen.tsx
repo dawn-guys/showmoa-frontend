@@ -365,6 +365,8 @@ export function MapScreen() {
           theatre={focusedTheatre}
           performances={performances ?? EMPTY_PERFORMANCES}
           isLoading={performancesLoading}
+          // 조회에 성공했는데 0건일 때만 빈 상태다(요청 실패는 빈 상태로 보지 않는다).
+          isEmpty={performances?.length === 0}
         />
       )}
 
