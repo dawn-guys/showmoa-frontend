@@ -67,6 +67,7 @@ export function SettingList() {
                   {user?.email}
                 </p>
                 <SettingRow label="비밀번호 변경" href="/password/update" />
+                <SettingRow label="회원 탈퇴" href="/setting/withdraw" />
                 <SettingRow
                   label="로그아웃"
                   onClick={() => setLogoutOpen(true)}
