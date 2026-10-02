@@ -7,7 +7,6 @@ import { ChevronLeft } from "lucide-react";
 import { cn } from "cn";
 import type { AreaResponse } from "@/app/(tabs)/_types";
 import { CtaButton } from "@/shared/components/cta-button";
-import { LoadingSpinner } from "@/shared/components/loading-spinner";
 import {
   isSelectableSido,
   MAX_DISTRICTS,
@@ -138,13 +137,9 @@ function RegionFilterDrawerBody({
         </p>
       </div>
 
-      {/* 지역 목록 두 열(시/도 · 구/군). */}
-      <div className="flex min-h-0 flex-1 bg-[#272727]">
-        {isPending ? (
-          <div className="flex flex-1 items-start justify-center pt-10">
-            <LoadingSpinner label="지역 목록 불러오는 중" />
-          </div>
-        ) : (
+      {/* 지역 목록 두 열(시/도 · 구/군). 불러오는 동안은 스피너 없이 비워 둔다. */}
+      <div aria-busy={isPending} className="flex min-h-0 flex-1 bg-[#272727]">
+        {!isPending && (
           <>
             <RegionColumn
               label="시/도 선택"
