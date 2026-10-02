@@ -14,6 +14,7 @@ import { CtaButton } from "@/shared/components/cta-button";
 import { AnimatedToast } from "@/shared/components/toast";
 import { useLogin } from "@/shared/hooks/useLogin";
 import {
+  OAUTH_DUPLICATE_EMAIL_VALUE,
   OAUTH_ERROR_VALUE,
   oauthStartPath,
   type OAuthProvider,
@@ -34,15 +35,28 @@ type LoginValues = z.infer<typeof loginSchema>;
 const EMAIL_ERROR_MESSAGE = "이메일 형식을 확인해 주세요";
 const LOGIN_ERROR_MESSAGE =
   "이메일 주소 또는 비밀번호를 확인한 후 다시 시도해 주세요";
+// 이메일·비밀번호로 이미 가입된 이메일로 소셜 로그인을 시도한 경우(오너 지정 문구).
+const DUPLICATE_EMAIL_ERROR_MESSAGE =
+  "가입된 이메일이에요. 비밀번호로 로그인해 주세요";
 const TOAST_ID = "login-error-toast";
+
+// 소셜 로그인 실패 사유(/oauth/callback → /login?error=...)별 토스트 문구.
+// 스펙에 일반 소셜 실패 문구가 없어 로그인 실패 토스트를 그대로 쓴다(오너 결정).
+const SOCIAL_ERROR_MESSAGES: Record<string, string> = {
+  [OAUTH_ERROR_VALUE]: LOGIN_ERROR_MESSAGE,
+  [OAUTH_DUPLICATE_EMAIL_VALUE]: DUPLICATE_EMAIL_ERROR_MESSAGE,
+};
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   const router = useRouter();
   const { login } = useLogin();
 
   // 소셜 로그인 실패로 되돌아온 경우(/oauth/callback → /login?error=...).
-  // 스펙에 소셜 실패 문구가 없어 로그인 실패 토스트를 그대로 쓴다(오너 결정).
-  const socialLoginFailed = React.use(searchParams).error === OAUTH_ERROR_VALUE;
+  const socialError = React.use(searchParams).error;
+  const socialErrorMessage =
+    typeof socialError === "string"
+      ? (SOCIAL_ERROR_MESSAGES[socialError] ?? null)
+      : null;
 
   const {
     register,
@@ -57,9 +71,14 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 
   // 이메일 검증 실패 상태(테두리 error 색)와 상단 에러 토스트.
   const [emailInvalid, setEmailInvalid] = React.useState(false);
-  const [toast, setToast] = React.useState<string | null>(
-    socialLoginFailed ? LOGIN_ERROR_MESSAGE : null,
-  );
+  const [toast, setToast] = React.useState<string | null>(socialErrorMessage);
+
+  // 실패 사유는 한 번만 보여준다. 읽은 즉시 주소에서 지워 새로고침·재진입 시
+  // 토스트가 다시 뜨지 않게 한다. 히스토리를 늘리지 않도록 replace한다.
+  React.useEffect(() => {
+    if (socialError === undefined) return;
+    window.history.replaceState(null, "", "/login");
+  }, [socialError]);
 
   // 토스트는 잠시 후 자동으로 사라진다.
   React.useEffect(() => {

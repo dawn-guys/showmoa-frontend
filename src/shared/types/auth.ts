@@ -1,6 +1,7 @@
 // Contract: UserResponse, TokenResponse, LoginRequest, RefreshTokenRequest,
 // EmailSendRequest, EmailSendResponse, EmailVerifyRequest, SignupRequest,
-// PasswordResetRequest, OAuthExchangeRequest (v3/api-docs)
+// PasswordResetRequest, OAuthExchangeRequest (v3/api-docs),
+// OAuth2ErrorDetail (백엔드 소스, api-docs 미반영)
 
 /** GET /api/users/me, POST /api/users/signup, PATCH /api/users/me/password 응답 */
 export interface UserResponse {
@@ -29,6 +30,17 @@ export interface RefreshTokenRequest {
 /** POST /api/auth/oauth/exchange 요청 바디. 소셜 로그인 콜백의 1회용 코드다. */
 export interface OAuthExchangeRequest {
   code: string;
+}
+
+/**
+ * GET /api/auth/oauth/error 응답. 소셜 로그인 실패 사유다.
+ * api-docs에 아직 없어 백엔드 소스(OAuth2ErrorService.OAuth2ErrorDetail)를 따른다.
+ * errorType은 "duplicate_email" | "social_login_failed", duplicate_email일 때
+ * detail은 기존 계정의 가입 방식(LOCAL·GOOGLE·KAKAO)이다.
+ */
+export interface OAuth2ErrorDetail {
+  errorType: string;
+  detail: string | null;
 }
 
 /** POST /api/email/send 요청 바디 */
