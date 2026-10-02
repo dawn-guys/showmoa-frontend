@@ -14,6 +14,8 @@ interface WeekViewProps {
   onSelectDate: (date: Date) => void;
   /** 이 달의 찜 공연 목록. 선택한 요일의 목록은 여기서 파생한다. */
   performances: WishlistCalendarResponse[];
+  /** 공휴일 날짜(yyyy-MM-dd). 공휴일에도 공연하는 공연을 거르는 데 쓴다. */
+  holidayDates: ReadonlySet<string>;
   /** 하트로 공연의 찜을 해제한다. */
   onRemove: (performanceId: number) => void;
 }
@@ -27,10 +29,15 @@ export function WeekView({
   selectedDate,
   onSelectDate,
   performances,
+  holidayDates,
   onRemove,
 }: WeekViewProps) {
   const weekDays = getWeekDays(today);
-  const dayPerformances = getPerformancesForDay(performances, selectedDate);
+  const dayPerformances = getPerformancesForDay(
+    performances,
+    selectedDate,
+    holidayDates,
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
