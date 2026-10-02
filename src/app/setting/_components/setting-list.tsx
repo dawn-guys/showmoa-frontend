@@ -3,6 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import {
+  LocationTermsContent,
+  PrivacyPolicyContent,
+} from "@/shared/components/legal-content";
 import { LegalDrawer } from "@/shared/components/legal-drawer";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -108,17 +112,21 @@ export function SettingList() {
         onConfirm={handleLogout}
       />
 
-      {/* 운영 정책 드로워. 본문은 확정 전이라 셸만 마운트한다. */}
+      {/* 운영 정책 드로워 */}
       <LegalDrawer
         open={policy === "privacy"}
         onOpenChange={(open) => setPolicy(open ? "privacy" : null)}
         title="개인 정보 처리 방침"
-      />
+      >
+        <PrivacyPolicyContent />
+      </LegalDrawer>
       <LegalDrawer
         open={policy === "location"}
         onOpenChange={(open) => setPolicy(open ? "location" : null)}
         title="위치 정보 서비스 이용 약관"
-      />
+      >
+        <LocationTermsContent />
+      </LegalDrawer>
     </>
   );
 }

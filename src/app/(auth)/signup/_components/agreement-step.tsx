@@ -3,6 +3,10 @@
 import * as React from "react";
 import { cn } from "cn";
 import { CtaButton } from "@/shared/components/cta-button";
+import {
+  LocationTermsContent,
+  PrivacyPolicyContent,
+} from "@/shared/components/legal-content";
 import { LegalDrawer } from "@/shared/components/legal-drawer";
 import { AgreementCheckbox } from "./agreement-checkbox";
 
@@ -63,21 +67,24 @@ export function AgreementStep({ onNext }: AgreementStepProps) {
         다음
       </CtaButton>
 
-      {/* 약관 본문은 확정 전이라 드로워 셸(앱바 + 스크롤 영역)만 노출한다. */}
       <LegalDrawer
         open={openTerm === "privacy"}
         onOpenChange={(open) => {
           if (!open) setOpenTerm(null);
         }}
         title="개인 정보 처리 방침"
-      />
+      >
+        <PrivacyPolicyContent />
+      </LegalDrawer>
       <LegalDrawer
         open={openTerm === "location"}
         onOpenChange={(open) => {
           if (!open) setOpenTerm(null);
         }}
         title="위치 정보 서비스 이용 약관"
-      />
+      >
+        <LocationTermsContent />
+      </LegalDrawer>
     </div>
   );
 }

@@ -2,6 +2,10 @@
 
 import { useQueryState } from "nuqs";
 import { CodeSquareLineDuotoneIcon } from "@solar-icons/react";
+import {
+  LocationTermsContent,
+  PrivacyPolicyContent,
+} from "@/shared/components/legal-content";
 import { LegalDrawer } from "@/shared/components/legal-drawer";
 import { overlayUrlOptions } from "@/shared/hooks/useOverlayFlag";
 
@@ -76,18 +80,21 @@ export function SiteFooter() {
         </a>
       </footer>
 
-      {/* 개인정보 처리 방침 / 위치 정보 서비스 이용 약관 드로워 셸.
-          본문은 아직 미확정이라 틀만 마운트한다. */}
+      {/* 개인정보 처리 방침 / 위치 정보 서비스 이용 약관 드로워 */}
       <LegalDrawer
         open={policy === "privacy"}
         onOpenChange={(open) => setPolicy(open ? "privacy" : null)}
         title="개인 정보 처리 방침"
-      />
+      >
+        <PrivacyPolicyContent />
+      </LegalDrawer>
       <LegalDrawer
         open={policy === "location"}
         onOpenChange={(open) => setPolicy(open ? "location" : null)}
         title="위치 정보 서비스 이용 약관"
-      />
+      >
+        <LocationTermsContent />
+      </LegalDrawer>
     </>
   );
 }

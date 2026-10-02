@@ -11,14 +11,14 @@ interface LegalDrawerProps {
   onOpenChange: (open: boolean) => void;
   /** 상단 바 제목 (드로워의 접근성 이름) */
   title: string;
-  /** 약관 본문. 아직 확정 전이면 비워 둔다. */
+  /** 약관 본문 (legal-content.tsx) */
   children?: React.ReactNode;
 }
 
 /**
  * 법적 고지(개인정보 처리 방침, 위치 정보 서비스 이용 약관 등)를 읽는
  * 공통 드로워 셸. 앱 컬럼 전체를 덮는 사이드 시트로 열리며, 뒤로가기
- * 버튼과 배경(백드롭)으로 닫는다. 본문은 확정 후 children으로 채운다.
+ * 버튼과 배경(백드롭)으로 닫는다. 본문은 children으로 받는다.
  */
 export function LegalDrawer({
   open,
@@ -54,7 +54,7 @@ export function LegalDrawer({
             </DialogPrimitive.Title>
           </header>
 
-          <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-safe">
+          <div className="flex-1 [scrollbar-width:none] overflow-y-auto overscroll-contain px-4 pb-safe [&::-webkit-scrollbar]:hidden">
             {children}
           </div>
         </DialogPrimitive.Popup>
