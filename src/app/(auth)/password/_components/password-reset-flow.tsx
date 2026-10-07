@@ -117,6 +117,7 @@ export function PasswordResetFlow({
       <main className="flex flex-1 flex-col">
         {currentStep === "email" && (
           <EmailVerification
+            purpose="PASSWORD_RESET"
             fixedEmail={fixedEmail}
             onVerified={handleVerified}
           />

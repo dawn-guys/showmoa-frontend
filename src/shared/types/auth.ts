@@ -1,7 +1,7 @@
 // Contract: UserResponse, TokenResponse, LoginRequest, RefreshTokenRequest,
 // EmailSendRequest, EmailSendResponse, EmailVerifyRequest, SignupRequest,
 // PasswordResetRequest, OAuthExchangeRequest (v3/api-docs),
-// OAuth2ErrorDetail (백엔드 소스, api-docs 미반영)
+// OAuth2ErrorDetail, EmailPurpose (백엔드 소스, api-docs 미반영)
 
 /** GET /api/users/me, POST /api/users/signup, PATCH /api/users/me/password 응답 */
 export interface UserResponse {
@@ -43,14 +43,28 @@ export interface OAuth2ErrorDetail {
   detail: string | null;
 }
 
+/**
+ * 인증 메일 발송 용도. 백엔드 소스(EmailPurpose) 기준이며 dev 서버 api-docs에는
+ * 아직 반영되지 않았다(배포 전 서버는 이 필드를 무시한다).
+ */
+export type EmailPurpose = "SIGNUP" | "PASSWORD_RESET" | "WITHDRAWAL";
+
 /** POST /api/email/send 요청 바디 */
 export interface EmailSendRequest {
   email: string;
+  purpose: EmailPurpose;
 }
 
-/** POST /api/email/send 응답. 인증 번호의 유효 시간(초)으로 타이머를 구동한다. */
+/**
+ * POST /api/email/send 응답. 인증 번호의 유효 시간(초)으로 타이머를 구동한다.
+ * 백엔드는 용도와 가입 여부가 맞지 않으면(회원가입인데 이미 가입, 비밀번호
+ * 찾기·탈퇴인데 미가입) 메일을 보내지 않고 sent false로 200을 준다.
+ * emailExists·sent는 dev 서버 api-docs에 아직 없어 선택 필드로 둔다.
+ */
 export interface EmailSendResponse {
   expirationSeconds: number;
+  emailExists?: boolean;
+  sent?: boolean;
 }
 
 /** POST /api/email/verify 요청 바디 */

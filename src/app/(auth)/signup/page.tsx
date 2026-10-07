@@ -93,7 +93,7 @@ export default function SignupPage() {
           <AgreementStep onNext={() => goTo("email")} />
         )}
         {currentStep === "email" && (
-          <EmailVerification onVerified={handleVerified} />
+          <EmailVerification purpose="SIGNUP" onVerified={handleVerified} />
         )}
         {currentStep === "password" && (
           <PasswordSetup
