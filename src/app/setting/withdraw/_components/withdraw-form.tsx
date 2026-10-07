@@ -21,18 +21,19 @@ const CTA = "회원 탈퇴";
 
 // 탈퇴 확인 모달(Figma node 814-3702). 본문·버튼 문구는 요청값 그대로.
 // 제목은 피그마에서 확인되지 않아 화면·버튼과 맞춰 임시로 "회원 탈퇴"를 쓴다.
-const MODAL_TITLE = "회원 탈퇴";
-const MODAL_DESCRIPTION =
+// 소셜 계정 탈퇴(SocialWithdrawForm)도 같은 모달을 쓴다.
+export const MODAL_TITLE = "회원 탈퇴";
+export const MODAL_DESCRIPTION =
   "탈퇴 시 계정 정보 및 서비스 이용 기록이 모두 삭제되며 복구할 수 없습니다. 소셜 로그인의 경우 연동이 해제됩니다.";
-const MODAL_CONFIRM = "회원 탈퇴";
+export const MODAL_CONFIRM = "회원 탈퇴";
 
 const TOAST_ID = "withdraw-error-toast";
 // 비밀번호 불일치 토스트. n은 실패 횟수로 치환한다.
 const failMessage = (n: number) =>
-  `5회 중 ${n}번을 실패 하셨습니다. 비밀번호를 확인해 주세요`;
+  `5회 중 ${n}번을 실패 하셨습니다. 인증번호를 확인해 주세요`;
 
 /**
- * 회원 탈퇴 폼. 비밀번호 입력 → "회원 탈퇴" CTA로 확인 모달을 띄우고, 모달에서
+ * 회원 탈퇴 폼(일반 계정). 비밀번호 입력 → "회원 탈퇴" CTA로 확인 모달을 띄우고, 모달에서
  * 한 번 더 확정해야 탈퇴 요청이 나간다. 응답이 실패(비밀번호 불일치 등)면 인풋
  * 테두리를 에러색으로 바꾸고 실패 횟수를 담은 토스트를 보여준다
  * (docs/spec/common-ui.md · 인풋 3, 토스트).

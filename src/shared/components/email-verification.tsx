@@ -9,6 +9,7 @@ import { CtaButton } from "@/shared/components/cta-button";
 import { AnimatedToast } from "@/shared/components/toast";
 import { VerificationTimer } from "@/shared/components/verification-timer";
 import { useEmailVerification } from "@/shared/hooks/useEmailVerification";
+import type { EmailPurpose } from "@/shared/types/auth";
 import { cn } from "cn";
 
 // UI 문구(docs/spec/auth.md · 회원가입/비밀번호 찾기/비밀번호 변경-공통).
@@ -17,6 +18,9 @@ const EMAIL_SUB = "메일을 입력하면 인증 번호가 발송 돼요";
 const EMAIL_PLACEHOLDER = "이메일을 입력해 주세요";
 const EMAIL_FORMAT_ERROR = "이메일 형식을 확인해 주세요";
 const EMAIL_REQUEST_ERROR = "유효하지 않은 이메일 입니다";
+// 회원가입 발송 단계에서 이미 가입된 이메일. docs/spec에 문구가 없어 회원가입
+// 화면의 가입 실패(409) 문구를 그대로 쓴다.
+const EMAIL_DUPLICATE_ERROR = "이미 가입된 이메일 입니다. 로그인 해 주세요";
 // CTA 문구는 spec에 없어 Figma(node 488:5172, 488:5572) 값을 따른다.
 const SEND_CTA = "인증 메일 발송";
 
@@ -45,6 +49,18 @@ interface EmailVerificationProps {
    */
   onVerified: (email: string) => void;
   /**
+   * 인증 메일 발송 용도. 백엔드가 용도별로 발송 여부를 판단한다
+   * (회원가입 SIGNUP · 비밀번호 찾기/변경 PASSWORD_RESET · 회원 탈퇴 WITHDRAWAL).
+   */
+  purpose: EmailPurpose;
+  /**
+   * 마운트 직후 고정 이메일로 인증 메일을 바로 보낸다(회원 탈퇴). fixedEmail과
+   * 함께 써야 한다. 발송에 실패하면 이메일 단계에 남아 발송 버튼으로 다시 보낸다.
+   */
+  autoSend?: boolean;
+  /** 인증 번호 단계의 안내 문구·placeholder를 화면 전용 문구로 바꾼다(회원 탈퇴). */
+  codeCopy?: { main: string; sub: string; placeholder: string };
+  /**
    * 인증할 이메일을 이 값으로 고정한다. 넘기면 이메일 인풋이 수정 불가가 되고
    * 형식 검증은 통과한 상태로 시작한다. 로그인 상태로 진행하는 비밀번호 변경이
    * 현재 계정 이메일(GET /api/users/me)을 고정하는 데 쓴다.
@@ -56,9 +72,9 @@ interface EmailVerificationProps {
 }
 
 /**
- * 이메일 인증 공통 블록. 회원가입 · 비밀번호 찾기 · 비밀번호 변경에서 동일하게
- * 쓰인다. 이메일 입력 → 인증 메일 발송 → 인증 번호 입력 → 완료의 2단계로
- * 진행한다. 블러 시 형식 검증(인풋 인라인 에러), 요청 실패 시 테두리 에러 +
+ * 이메일 인증 공통 블록. 회원가입 · 비밀번호 찾기 · 비밀번호 변경 · 회원 탈퇴
+ * (소셜 계정)에서 동일하게 쓰인다. 이메일 입력 → 인증 메일 발송 → 인증 번호
+ * 입력 → 완료의 2단계로 진행한다. 블러 시 형식 검증(인풋 인라인 에러), 요청 실패 시 테두리 에러 +
  * 상단 토스트를 보여준다(docs/spec/common-ui.md · 인풋). 인증 번호 단계에는
  * 공통 UI 타이머가 붙고, 시간이 만료되면 404 페이지로 넘어간다.
  *
@@ -67,6 +83,9 @@ interface EmailVerificationProps {
  */
 export function EmailVerification({
   onVerified,
+  purpose,
+  autoSend = false,
+  codeCopy,
   fixedEmail,
 }: EmailVerificationProps) {
   const { sendCode, isSending, verifyCode, isVerifying } =
@@ -91,6 +110,12 @@ export function EmailVerification({
   const [toast, setToast] = React.useState<string | null>(null);
   // 타이머 만료 → 렌더 경로에서 notFound()로 404 이동.
   const [expired, setExpired] = React.useState(false);
+  // 검증을 통과한 번호. 서버는 검증에 성공하면 번호를 지워서 같은 번호로 다시
+  // 요청하면 실패한다. 다음 단계가 같은 화면에 남는 경우(탈퇴 확인 모달 취소 후
+  // 다시 완료)에는 재요청 없이 통과시킨다.
+  const [verifiedCode, setVerifiedCode] = React.useState<string | null>(null);
+  // 자동 발송은 한 번만 한다(개발 모드 StrictMode의 이펙트 재실행 대비).
+  const autoSentRef = React.useRef(false);
 
   const emailValid = emailSchema.safeParse(email).success;
   const codeValid = isValidCode(code);
@@ -113,14 +138,44 @@ export function EmailVerification({
     if (email && !emailValid) setEmailError(EMAIL_FORMAT_ERROR);
   };
 
-  /** 인증 메일 발송. 성공하면 응답의 유효 시간으로 타이머를 새로 시작한다. */
+  /**
+   * 인증 메일 발송. 성공하면 응답의 유효 시간으로 타이머를 새로 시작하고 true를
+   * 돌려준다. 백엔드가 메일을 보내지 않았으면(sent false) 사유 토스트를 띄우고
+   * false를 돌려준다. 요청 자체의 실패는 throw한다.
+   */
   const requestCode = async () => {
-    const { expirationSeconds: seconds } = await sendCode({ email });
+    const {
+      expirationSeconds: seconds,
+      emailExists,
+      sent,
+    } = await sendCode({ email, purpose });
+    // 이전 백엔드는 sent를 주지 않으므로 false일 때만 거른다.
+    if (sent === false) {
+      setToast(
+        purpose === "SIGNUP" && emailExists
+          ? EMAIL_DUPLICATE_ERROR
+          : EMAIL_REQUEST_ERROR,
+      );
+      return false;
+    }
     setExpirationSeconds(seconds);
     setSentAt(Date.now());
     setCode("");
+    setVerifiedCode(null);
     setCodeError(null);
     setCodeInvalid(false);
+    return true;
+  };
+
+  /** 이메일 단계의 발송. 실패하면 인풋 테두리 에러 + 상단 토스트를 띄운다. */
+  const sendFromEmailStep = async () => {
+    try {
+      if (!(await requestCode())) setEmailInvalid(true);
+    } catch {
+      // 발송 실패: 인풋 테두리 에러 + 상단 토스트(docs/spec/common-ui.md · 인풋).
+      setEmailInvalid(true);
+      setToast(EMAIL_REQUEST_ERROR);
+    }
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -129,14 +184,19 @@ export function EmailVerification({
       setEmailError(EMAIL_FORMAT_ERROR);
       return;
     }
-    try {
-      await requestCode();
-    } catch {
-      // 발송 실패: 인풋 테두리 에러 + 상단 토스트(docs/spec/common-ui.md · 인풋).
-      setEmailInvalid(true);
-      setToast(EMAIL_REQUEST_ERROR);
-    }
+    await sendFromEmailStep();
   };
+
+  // 자동 발송(회원 탈퇴): 진입하자마자 고정 이메일로 보낸다. 상태 갱신은 응답을
+  // 받은 뒤 비동기로 일어난다.
+  const onAutoSend = React.useEffectEvent(() => {
+    void sendFromEmailStep();
+  });
+  React.useEffect(() => {
+    if (!autoSend || autoSentRef.current) return;
+    autoSentRef.current = true;
+    onAutoSend();
+  }, [autoSend]);
 
   const handleResend = async () => {
     // 응답을 기다리는 동안 중복 발송을 막는다.
@@ -166,6 +226,10 @@ export function EmailVerification({
       setCodeError(CODE_FORMAT_ERROR);
       return;
     }
+    if (code === verifiedCode) {
+      onVerified(email);
+      return;
+    }
     try {
       await verifyCode({ email, code });
     } catch {
@@ -173,6 +237,7 @@ export function EmailVerification({
       setToast(CODE_REQUEST_ERROR);
       return;
     }
+    setVerifiedCode(code);
     onVerified(email);
   };
 
@@ -234,9 +299,11 @@ export function EmailVerification({
         </>
       ) : (
         <>
-          <h2 className="text-h1 text-foreground">{CODE_MAIN}</h2>
+          <h2 className="text-h1 text-foreground">
+            {codeCopy?.main ?? CODE_MAIN}
+          </h2>
           <p className="mt-2.5 text-sm font-medium break-keep text-muted-foreground">
-            {CODE_SUB}
+            {codeCopy?.sub ?? CODE_SUB}
           </p>
           <form
             onSubmit={handleVerify}
@@ -266,7 +333,7 @@ export function EmailVerification({
                 autoComplete="one-time-code"
                 enterKeyHint="done"
                 maxLength={6}
-                placeholder={CODE_PLACEHOLDER}
+                placeholder={codeCopy?.placeholder ?? CODE_PLACEHOLDER}
                 value={code}
                 onChange={handleCodeChange}
                 onBlur={handleCodeBlur}

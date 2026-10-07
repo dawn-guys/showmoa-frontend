@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
+  OAUTH_CODE_VERIFIER_COOKIE,
   OAUTH_DUPLICATE_EMAIL_VALUE,
   OAUTH_ERROR_CODE_PARAM,
   OAUTH_ERROR_PARAM,
@@ -30,13 +32,23 @@ export async function GET(request: Request) {
 
   if (code) {
     const body: OAuthExchangeRequest = { code };
+    // 백엔드는 code에 묶인 verifier 쿠키가 함께 와야 토큰을 준다. 브라우저가
+    // 이 콜백에 실어 보낸 값을 교환 요청에 그대로 전달하고, 1회용이라 바로 지운다.
+    const cookieStore = await cookies();
+    const verifier = cookieStore.get(OAUTH_CODE_VERIFIER_COOKIE)?.value;
+    if (verifier) cookieStore.delete(OAUTH_CODE_VERIFIER_COOKIE);
 
     try {
       const tokens = await requestBackend<TokenResponse>(
         "/api/auth/oauth/exchange",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(verifier
+              ? { Cookie: `${OAUTH_CODE_VERIFIER_COOKIE}=${verifier}` }
+              : {}),
+          },
           body: JSON.stringify(body),
         },
       );

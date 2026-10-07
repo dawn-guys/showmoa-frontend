@@ -21,6 +21,14 @@ export function oauthStartPath(provider: OAuthProvider) {
   return `/api/auth/oauth/start/${provider}`;
 }
 
+/**
+ * 로그인 성공 시 백엔드가 심는 1회용 verifier 쿠키 이름(백엔드 소스
+ * OAuth2LoginSuccessHandler). 코드 교환 요청에 이 값이 함께 가야 토큰이 나온다.
+ * 백엔드 도메인에 심기는 쿠키라, 프론트 콜백에 실려 오는 것은 두 주소가 같은
+ * 호스트일 때(로컬 localhost)뿐이다.
+ */
+export const OAUTH_CODE_VERIFIER_COOKIE = "oauth_code_verifier";
+
 /** 백엔드가 실패 사유 조회용 1회용 코드를 실어 보내는 콜백 쿼리 이름. */
 export const OAUTH_ERROR_CODE_PARAM = "error_code";
 
