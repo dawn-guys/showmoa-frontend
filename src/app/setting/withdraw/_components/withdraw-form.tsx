@@ -13,10 +13,10 @@ import { useWithdraw } from "../_hooks/use-withdraw";
 
 // 안내 문구. docs/spec에 회원 탈퇴 스펙 문서가 없어 요청받은 문구를 그대로 쓴다
 // (스펙이 생기면 그쪽으로 옮긴다).
-const MAIN = "본인 확인을 위해 비밀번호를 입력해 주세요";
-const SUB = "회원 탈퇴를 위해 현재 사용 중인 비밀번호를 입력해 주세요";
+const MAIN = "이메일로 인증번호를 발송 했습니다";
+const SUB = "회원 탈퇴를 위해 메일로 전송 된 인증번호를 작성해 주세요";
 // 비밀번호 인풋 placeholder는 로그인 화면과 동일한 기존 문구를 재사용한다.
-const PASSWORD_PLACEHOLDER = "비밀번호를 작성해 주세요";
+const PASSWORD_PLACEHOLDER = "인증번호 5자리를 작성해 주세요";
 const CTA = "회원 탈퇴";
 
 // 탈퇴 확인 모달(Figma node 814-3702). 본문·버튼 문구는 요청값 그대로.
