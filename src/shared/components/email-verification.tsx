@@ -9,6 +9,7 @@ import { CtaButton } from "@/shared/components/cta-button";
 import { AnimatedToast } from "@/shared/components/toast";
 import { VerificationTimer } from "@/shared/components/verification-timer";
 import { useEmailVerification } from "@/shared/hooks/useEmailVerification";
+import { isApiError } from "@/shared/lib/api-error";
 import type { EmailPurpose } from "@/shared/types/auth";
 import { cn } from "cn";
 
@@ -18,9 +19,11 @@ const EMAIL_SUB = "메일을 입력하면 인증 번호가 발송 돼요";
 const EMAIL_PLACEHOLDER = "이메일을 입력해 주세요";
 const EMAIL_FORMAT_ERROR = "이메일 형식을 확인해 주세요";
 const EMAIL_REQUEST_ERROR = "유효하지 않은 이메일 입니다";
-// 회원가입 발송 단계에서 이미 가입된 이메일. docs/spec에 문구가 없어 회원가입
-// 화면의 가입 실패(409) 문구를 그대로 쓴다.
-const EMAIL_DUPLICATE_ERROR = "이미 가입된 이메일 입니다. 로그인 해 주세요";
+// 회원가입 발송 단계에서 이미 가입된 이메일(응답 emailExists true, sent false).
+const EMAIL_DUPLICATE_ERROR = "이미 가입된 이메일이에요. 로그인해 주세요";
+// 발송 제한(429). 같은 이메일 60초 재발송 제한과 IP 발송 횟수 제한이 같은
+// 응답으로 와 남은 시간을 알 수 없으므로 문구에 시간을 넣지 않는다.
+const EMAIL_COOLDOWN_ERROR = "잠시 후 다시 시도해 주세요";
 // CTA 문구는 spec에 없어 Figma(node 488:5172, 488:5572) 값을 따른다.
 const SEND_CTA = "인증 메일 발송";
 
@@ -34,8 +37,8 @@ const VERIFY_CTA = "완료";
 const TOAST_ID = "email-verification-toast";
 
 // 백엔드는 같은 이메일로 60초 안에 다시 발송하면 429로 거절한다. 이 값은 계약에
-// 없어(응답에 담겨 오지 않는다) 상수로 둔다. 거절 상황의 문구가 docs/spec에
-// 없으므로 재발송 버튼을 그동안 비활성으로 두어 요청 자체를 막는다.
+// 없어(응답에 담겨 오지 않는다) 상수로 둔다. 재발송 버튼을 그동안 비활성으로
+// 두어 요청 자체를 막고, 그래도 429가 오면 발송 제한 토스트를 띄운다.
 const RESEND_COOLDOWN_SECONDS = 60;
 
 const emailSchema = z.email();
@@ -171,7 +174,12 @@ export function EmailVerification({
   const sendFromEmailStep = async () => {
     try {
       if (!(await requestCode())) setEmailInvalid(true);
-    } catch {
+    } catch (error) {
+      // 발송 제한은 입력값 문제가 아니므로 테두리 에러 없이 토스트만 띄운다.
+      if (isApiError(error) && error.status === 429) {
+        setToast(EMAIL_COOLDOWN_ERROR);
+        return;
+      }
       // 발송 실패: 인풋 테두리 에러 + 상단 토스트(docs/spec/common-ui.md · 인풋).
       setEmailInvalid(true);
       setToast(EMAIL_REQUEST_ERROR);
@@ -203,9 +211,13 @@ export function EmailVerification({
     if (isSending) return;
     try {
       await requestCode();
-    } catch {
+    } catch (error) {
       // 재발송 단계의 이메일 인풋은 수정 불가라 테두리 에러 없이 토스트만 띄운다.
-      setToast(EMAIL_REQUEST_ERROR);
+      setToast(
+        isApiError(error) && error.status === 429
+          ? EMAIL_COOLDOWN_ERROR
+          : EMAIL_REQUEST_ERROR,
+      );
     }
   };
 

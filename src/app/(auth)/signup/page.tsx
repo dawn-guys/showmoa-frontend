@@ -11,9 +11,8 @@ import { SignupComplete } from "./_components/signup-complete";
 import { useSignupFunnel } from "./_hooks/use-signup-funnel";
 import { useSignup } from "./_hooks/use-signup";
 
-// 가입 실패 토스트 문구. docs/spec/auth.md에 이 경우의 문구가 없어 기존 스펙
-// 문구의 말투에 맞춰 정했다(확정되면 docs/spec으로 옮긴다).
-const DUPLICATE_EMAIL_ERROR = "이미 가입된 이메일 입니다. 로그인 해 주세요";
+// 가입 실패 토스트 문구(docs/spec/auth.md · 회원가입 9).
+const DUPLICATE_EMAIL_ERROR = "이미 가입된 이메일이에요. 로그인해 주세요";
 const UNVERIFIED_EMAIL_ERROR =
   "인증 시간이 만료 됐어요. 이메일 인증을 다시 해 주세요";
 const SIGNUP_ERROR = "가입에 실패했어요. 잠시 후 다시 시도해 주세요";
@@ -59,10 +58,11 @@ export default function SignupPage() {
     try {
       await signup({ email, password: newPassword });
     } catch (error) {
-      // 409는 이미 가입된 이메일, 400은 이메일 인증이 만료됐거나 이미 소모된
-      // 경우다(형식·비밀번호 규칙 위반은 화면 검증이 더 엄격해 여기까지 오지
-      // 않는다). 인증이 풀렸으면 비밀번호 단계에 남아 있어도 다시 시도할 수
-      // 없으므로 이메일 인증 단계로 되돌린다.
+      // 409는 이미 가입된 이메일이다. 발송 단계에서 걸러지므로 인증 후 같은
+      // 이메일로 소셜 로그인 계정이 먼저 생긴 경우 정도만 남는다. 400은 이메일
+      // 인증이 만료됐거나 이미 소모된 경우다(형식·비밀번호 규칙 위반은 화면
+      // 검증이 더 엄격해 여기까지 오지 않는다). 인증이 풀렸으면 비밀번호 단계에
+      // 남아 있어도 다시 시도할 수 없으므로 이메일 인증 단계로 되돌린다.
       if (isApiError(error) && error.status === 409) {
         setToast(DUPLICATE_EMAIL_ERROR);
       } else if (isApiError(error) && error.status === 400) {
