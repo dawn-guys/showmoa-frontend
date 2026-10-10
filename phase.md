@@ -190,9 +190,11 @@ split out to J and deferred to the end of the phase.
 - [x] Update: the same flow and the same POST /api/users/password/reset.
       PATCH /api/users/me/password is not used — it requires currentPassword
       and the spec flow has no such input (owner decided). The email to
-      verify is fixed to the `email` from GET /api/users/me; on success the
-      screen logs in with the new password and goes to /setting, or to
-      /login if that login fails.
+      verify is fixed to the `email` from GET /api/users/me and the
+      verification mail is sent on entry. On success the backend ends every
+      session, so the screen clears cookies via the logout route and goes to
+      /login with a success toast; the user logs in again manually (owner
+      decided).
 - [x] Password rule: resolved in favour of the contract — letters (either
       case) + digits, min 8, no max. PasswordSetup and the three copy
       entries in docs/spec/auth.md were updated to match.
