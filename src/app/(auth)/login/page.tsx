@@ -38,6 +38,11 @@ const LOGIN_ERROR_MESSAGE =
 // 이메일·비밀번호로 이미 가입된 이메일로 소셜 로그인을 시도한 경우(오너 지정 문구).
 const DUPLICATE_EMAIL_ERROR_MESSAGE =
   "가입된 이메일이에요. 비밀번호로 로그인해 주세요";
+// 비밀번호 변경 후 로그아웃되어 넘어온 경우(/password/update → /login?notice=...)
+// 띄우는 성공 토스트(오너 지정 문구).
+const PASSWORD_CHANGED_NOTICE = "password-changed";
+const PASSWORD_CHANGED_MESSAGE =
+  "비밀번호를 변경했습니다. 다시 로그인 해주세요";
 const TOAST_ID = "login-error-toast";
 
 // 소셜 로그인 실패 사유(/oauth/callback → /login?error=...)별 토스트 문구.
@@ -52,11 +57,13 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
   const { login } = useLogin();
 
   // 소셜 로그인 실패로 되돌아온 경우(/oauth/callback → /login?error=...).
-  const socialError = React.use(searchParams).error;
+  const { error: socialError, notice } = React.use(searchParams);
   const socialErrorMessage =
     typeof socialError === "string"
       ? (SOCIAL_ERROR_MESSAGES[socialError] ?? null)
       : null;
+  const noticeMessage =
+    notice === PASSWORD_CHANGED_NOTICE ? PASSWORD_CHANGED_MESSAGE : null;
 
   const {
     register,
@@ -71,14 +78,16 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 
   // 이메일 검증 실패 상태(테두리 error 색)와 상단 에러 토스트.
   const [emailInvalid, setEmailInvalid] = React.useState(false);
-  const [toast, setToast] = React.useState<string | null>(socialErrorMessage);
+  const [toast, setToast] = React.useState<string | null>(
+    socialErrorMessage ?? noticeMessage,
+  );
 
-  // 실패 사유는 한 번만 보여준다. 읽은 즉시 주소에서 지워 새로고침·재진입 시
-  // 토스트가 다시 뜨지 않게 한다. 히스토리를 늘리지 않도록 replace한다.
+  // 실패 사유·안내는 한 번만 보여준다. 읽은 즉시 주소에서 지워 새로고침·재진입
+  // 시 토스트가 다시 뜨지 않게 한다. 히스토리를 늘리지 않도록 replace한다.
   React.useEffect(() => {
-    if (socialError === undefined) return;
+    if (socialError === undefined && notice === undefined) return;
     window.history.replaceState(null, "", "/login");
-  }, [socialError]);
+  }, [socialError, notice]);
 
   // 토스트는 잠시 후 자동으로 사라진다.
   React.useEffect(() => {
@@ -131,11 +140,12 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* 상단 에러 토스트: 위에서 스르륵 내려왔다가 일정 시간 뒤 다시 올라가 사라진다. */}
+      {/* 상단 토스트: 위에서 스르륵 내려왔다가 일정 시간 뒤 다시 올라가 사라진다.
+          비밀번호 변경 안내만 success, 나머지는 error다. */}
       <AnimatedToast
         open={!!toast}
         message={toast ?? ""}
-        variant="error"
+        variant={toast === PASSWORD_CHANGED_MESSAGE ? "success" : "error"}
         id={TOAST_ID}
       />
 

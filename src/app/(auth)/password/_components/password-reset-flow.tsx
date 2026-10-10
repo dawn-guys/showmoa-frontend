@@ -25,8 +25,8 @@ interface PasswordResetFlowProps {
    */
   fixedEmail?: string;
   /**
-   * 재설정 성공 후 동작. 화면마다 달라서(로그인 화면 이동 / 새 비밀번호로
-   * 자동 로그인) 호출 측이 정한다. 끝날 때까지 CTA 로딩이 유지된다.
+   * 재설정 성공 후 동작. 화면마다 달라서(로그인 화면 이동 / 로그아웃 후
+   * 로그인 화면 이동) 호출 측이 정한다. 끝날 때까지 CTA 로딩이 유지된다.
    */
   onReset: (values: {
     email: string;
@@ -63,7 +63,7 @@ export function PasswordResetFlow({
   // 재설정 요청 실패. 확인 인풋 테두리에 에러 색을 넣는다
   // (docs/spec/common-ui.md · 인풋 3).
   const [resetFailed, setResetFailed] = React.useState(false);
-  // 성공 후 동작(자동 로그인·이동)이 끝날 때까지 CTA 로딩을 이어 둔다.
+  // 성공 후 동작(로그아웃·이동)이 끝날 때까지 CTA 로딩을 이어 둔다.
   const [isFinishing, setIsFinishing] = React.useState(false);
 
   // 토스트는 잠시 후 자동으로 사라진다.
