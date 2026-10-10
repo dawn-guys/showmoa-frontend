@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * 로그인이 필요한 화면의 접근 가드.
+ * 로그인 여부에 따른 화면 접근 가드.
  *
- * 리프레시 토큰 쿠키가 없으면 세션이 없는 것으로 보고 /login으로 보낸다.
+ * - 로그인이 필요한 화면: 리프레시 토큰 쿠키가 없으면 세션이 없는 것으로 보고
+ *   /login으로 보낸다.
+ * - /login: 이미 로그인한 상태면 로그인 화면을 보여줄 이유가 없어 홈으로 보낸다.
+ *
  * accessToken이 아니라 refreshToken으로 판정하는 이유: accessToken은 수명이 짧아
  * 만료된 상태에서도 갱신으로 세션이 이어지는데, 그것까지 로그아웃 처리하면 안 된다.
  *
@@ -16,11 +19,19 @@ import type { NextRequest } from "next/server";
 const REFRESH_TOKEN_COOKIE = "sm_rt";
 
 export function proxy(request: NextRequest) {
-  if (request.cookies.has(REFRESH_TOKEN_COOKIE)) return NextResponse.next();
+  const hasSession = request.cookies.has(REFRESH_TOKEN_COOKIE);
+
+  if (request.nextUrl.pathname === "/login") {
+    return hasSession
+      ? NextResponse.redirect(new URL("/", request.url))
+      : NextResponse.next();
+  }
+
+  if (hasSession) return NextResponse.next();
 
   return NextResponse.redirect(new URL("/login", request.url));
 }
 
 export const config = {
-  matcher: ["/notification", "/password/update", "/setting/withdraw"],
+  matcher: ["/login", "/notification", "/password/update", "/setting/withdraw"],
 };
