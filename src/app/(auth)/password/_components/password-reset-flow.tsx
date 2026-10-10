@@ -20,7 +20,8 @@ interface PasswordResetFlowProps {
   title: string;
   /**
    * 인증할 이메일을 고정한다(비밀번호 변경). 넘기면 이메일 인풋이 수정 불가가
-   * 된다. 고정해도 인증 단계 자체는 건너뛰지 않는다.
+   * 되고, 입력할 값이 없으므로 진입하자마자 인증 메일을 자동 발송한다(회원
+   * 탈퇴와 동일). 고정해도 인증 단계 자체는 건너뛰지 않는다.
    */
   fixedEmail?: string;
   /**
@@ -119,6 +120,7 @@ export function PasswordResetFlow({
           <EmailVerification
             purpose="PASSWORD_RESET"
             fixedEmail={fixedEmail}
+            autoSend={fixedEmail !== undefined}
             onVerified={handleVerified}
           />
         )}

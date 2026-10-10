@@ -57,8 +57,9 @@ interface EmailVerificationProps {
    */
   purpose: EmailPurpose;
   /**
-   * 마운트 직후 고정 이메일로 인증 메일을 바로 보낸다(회원 탈퇴). fixedEmail과
-   * 함께 써야 한다. 발송에 실패하면 이메일 단계에 남아 발송 버튼으로 다시 보낸다.
+   * 마운트 직후 고정 이메일로 인증 메일을 바로 보낸다(비밀번호 변경·회원 탈퇴).
+   * fixedEmail과 함께 써야 한다. 발송에 실패하면 이메일 단계에 남아 발송 버튼으로
+   * 다시 보낸다.
    */
   autoSend?: boolean;
   /** 인증 번호 단계의 안내 문구·placeholder를 화면 전용 문구로 바꾼다(회원 탈퇴). */
@@ -195,8 +196,8 @@ export function EmailVerification({
     await sendFromEmailStep();
   };
 
-  // 자동 발송(회원 탈퇴): 진입하자마자 고정 이메일로 보낸다. 상태 갱신은 응답을
-  // 받은 뒤 비동기로 일어난다.
+  // 자동 발송(비밀번호 변경·회원 탈퇴): 진입하자마자 고정 이메일로 보낸다. 상태
+  // 갱신은 응답을 받은 뒤 비동기로 일어난다.
   const onAutoSend = React.useEffectEvent(() => {
     void sendFromEmailStep();
   });
