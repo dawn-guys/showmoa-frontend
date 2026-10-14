@@ -137,7 +137,8 @@ export function WishlistLikedView() {
             검색 결과가 없습니다
           </p>
         ) : (
-          <ul className="flex flex-col gap-3.5">
+          // 마지막 항목이 하단 나브에 붙지 않도록 마지막 자식에 하단 여백을 둔다.
+          <ul className="flex flex-col gap-3.5 *:last:mb-10">
             {filtered.map((performance) => (
               <WishlistItem
                 key={performance.performanceId}
