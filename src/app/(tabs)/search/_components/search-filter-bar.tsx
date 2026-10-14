@@ -1,4 +1,4 @@
-import { DocumentTextLinearIcon, HeartsLinearIcon } from "@solar-icons/react";
+import { GpsOutlineIcon, HeartsLinearIcon } from "@solar-icons/react";
 import { SearchFilterChip } from "./search-filter-chip";
 
 interface SearchFilterBarProps {
@@ -44,7 +44,7 @@ export function SearchFilterBar({
           onClick={onOpenRegion}
           className={filterButtonClassName}
         >
-          <DocumentTextLinearIcon size={18} className="text-primary" />
+          <GpsOutlineIcon size={18} className="text-primary" />
           지역 필터
         </button>
       </div>
