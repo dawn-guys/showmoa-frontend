@@ -1,6 +1,9 @@
 import { ArrowRightUpLinearIcon } from "@solar-icons/react";
 import type { TicketingSiteInfo } from "@/app/(tabs)/_types";
-import { parseShowTimeGuidance } from "@/app/(tabs)/detail/[id]/_lib/detail-format";
+import {
+  parseShowTimeGuidance,
+  replaceHolidayLabel,
+} from "@/app/(tabs)/detail/[id]/_lib/detail-format";
 
 interface PerformanceInfoSectionProps {
   /** 기간 표기(오픈런이면 "종료 기간 미정") */
@@ -45,8 +48,10 @@ export function PerformanceInfoSection({
   ticketingSites,
   hideTicketing,
 }: PerformanceInfoSectionProps) {
+  // 공휴일 표기(HOL)를 먼저 바꿔 두어 파싱 결과와 원문 폴백 모두에 반영한다.
+  const showTimeText = replaceHolidayLabel(showTimeGuidance);
   // 요일별 줄로 분리한다. 자유 형식이라 파싱이 안 맞으면 null → 원문 그대로 표시.
-  const showTimeLines = parseShowTimeGuidance(showTimeGuidance);
+  const showTimeLines = parseShowTimeGuidance(showTimeText);
 
   return (
     <section className="flex flex-col gap-6">
@@ -70,7 +75,7 @@ export function PerformanceInfoSection({
                 </span>
               ))
             ) : (
-              <span className="break-keep">{showTimeGuidance}</span>
+              <span className="break-keep">{showTimeText}</span>
             )}
           </InfoRow>
         )}
