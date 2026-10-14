@@ -49,9 +49,17 @@ export function isTicketingHidden(
   return isAfter(startOfDay(new Date()), parseISO(endDate));
 }
 
+/**
+ * showTimeGuidance의 공휴일 표기 "HOL"을 화면용 "공휴일"로 바꾼다.
+ * 단어 경계로 감싸 "HOL"이 독립된 표기일 때만 치환한다.
+ */
+export function replaceHolidayLabel(text: string): string {
+  return text.replace(/\bHOL\b/g, "공휴일");
+}
+
 /** 요일별로 분리한 상영 시간 한 줄(요일 라벨 + 시간들). */
 export interface ShowTimeLine {
-  /** 요일 라벨(예: "월요일", "월요일 ~ 금요일", "HOL") */
+  /** 요일 라벨(예: "월요일", "월요일 ~ 금요일", "공휴일") */
   day: string;
   /** 시간들(", "로 구분, 예: "15:00, 17:00, 19:30") */
   times: string;
@@ -59,7 +67,8 @@ export interface ShowTimeLine {
 
 /**
  * showTimeGuidance 자유 문구를 요일별 줄로 분리한다.
- * 형식: "월요일 ~ 금요일(15:00,17:00,19:30), 토요일(13:00), HOL(14:00)"
+ * 형식: "월요일 ~ 금요일(15:00,17:00,19:30), 토요일(13:00), 공휴일(14:00)"
+ * (원문의 "HOL"은 호출부에서 replaceHolidayLabel로 먼저 바꾼다)
  *  - 세그먼트 구분은 ", "(콤마+공백), 시간 구분은 ","(공백 없음)이라
  *    ", "로 나누면 시간을 깨지 않고 세그먼트만 안전하게 분리된다.
  *  - 각 세그먼트는 "{요일}(시간들)" 꼴이다.
