@@ -3,7 +3,8 @@
  *
  * 로그인 시작 URL은 계약(v3/api-docs)에 없다. 백엔드의 Spring Security 필터
  * 경로라 문서화되지 않고, 실제 동작으로 확인했다.
- * - GET {백엔드}/oauth2/authorization/{provider} → 구글·카카오로 302
+ * - GET {백엔드}/oauth2/authorization/{provider}?code_challenge={해시} → 구글·카카오로 302
+ *   code_challenge가 없으면 로그인 후 code 대신 실패(error_code)로 돌아온다
  * - redirect_uri는 백엔드 자신({백엔드}/login/oauth2/code/{provider})이라
  *   프론트가 정할 값이 없다
  * - 실패하면 {프론트}/oauth/callback?error_code={1회용 코드} 로 되돌아온다.
@@ -22,10 +23,9 @@ export function oauthStartPath(provider: OAuthProvider) {
 }
 
 /**
- * 로그인 성공 시 백엔드가 심는 1회용 verifier 쿠키 이름(백엔드 소스
- * OAuth2LoginSuccessHandler). 코드 교환 요청에 이 값이 함께 가야 토큰이 나온다.
- * 백엔드 도메인에 심기는 쿠키라, 프론트 콜백에 실려 오는 것은 두 주소가 같은
- * 호스트일 때(로컬 localhost)뿐이다.
+ * PKCE verifier를 보관하는 1회용 쿠키 이름. 로그인 시작 라우트가 프론트 도메인에
+ * 심고 콜백 라우트가 읽어 코드 교환 요청 바디에 싣는다. 백엔드 도메인 쿠키로는
+ * 배포 환경(도메인이 다름)에서 콜백에 실려 오지 않아 프론트가 직접 보관한다.
  */
 export const OAUTH_CODE_VERIFIER_COOKIE = "oauth_code_verifier";
 

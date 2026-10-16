@@ -1,7 +1,7 @@
 // Contract: UserResponse, TokenResponse, LoginRequest, RefreshTokenRequest,
 // EmailSendRequest, EmailSendResponse, EmailVerifyRequest, SignupRequest,
-// PasswordResetRequest, OAuthExchangeRequest (v3/api-docs),
-// OAuth2ErrorDetail, EmailPurpose (백엔드 소스, api-docs 미반영)
+// PasswordResetRequest (v3/api-docs),
+// OAuthExchangeRequest, OAuth2ErrorDetail, EmailPurpose (백엔드 소스, api-docs 미반영)
 
 /** GET /api/users/me, POST /api/users/signup, PATCH /api/users/me/password 응답 */
 export interface UserResponse {
@@ -27,9 +27,13 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
-/** POST /api/auth/oauth/exchange 요청 바디. 소셜 로그인 콜백의 1회용 코드다. */
+/**
+ * POST /api/auth/oauth/exchange 요청 바디. code는 소셜 로그인 콜백의 1회용 코드,
+ * verifier는 로그인 시작 때 보낸 code_challenge의 원본이다(PKCE, 43~128자).
+ */
 export interface OAuthExchangeRequest {
   code: string;
+  verifier: string;
 }
 
 /**
