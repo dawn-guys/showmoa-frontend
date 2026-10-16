@@ -7,7 +7,11 @@ import {
   OAUTH_ERROR_PARAM,
   OAUTH_ERROR_VALUE,
 } from "@/shared/constants/oauth";
-import { requestBackend, writeTokens } from "@/shared/lib/backend.server";
+import {
+  cookieOptions,
+  requestBackend,
+  writeTokens,
+} from "@/shared/lib/backend.server";
 import type {
   OAuth2ErrorDetail,
   OAuthExchangeRequest,
@@ -30,25 +34,24 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const code = params.get("code");
 
-  if (code) {
-    const body: OAuthExchangeRequest = { code };
-    // 백엔드는 code에 묶인 verifier 쿠키가 함께 와야 토큰을 준다. 브라우저가
-    // 이 콜백에 실어 보낸 값을 교환 요청에 그대로 전달하고, 1회용이라 바로 지운다.
-    const cookieStore = await cookies();
-    const verifier = cookieStore.get(OAUTH_CODE_VERIFIER_COOKIE)?.value;
-    if (verifier) cookieStore.delete(OAUTH_CODE_VERIFIER_COOKIE);
+  // 로그인 시작 라우트가 심은 PKCE verifier. 1회용이라 성공·실패와 관계없이 지운다.
+  // maxAge 0으로 만료시켜 심을 때와 같은 옵션(path·secure)을 맞춘다.
+  const cookieStore = await cookies();
+  const verifier = cookieStore.get(OAUTH_CODE_VERIFIER_COOKIE)?.value;
+  if (verifier) {
+    cookieStore.set(OAUTH_CODE_VERIFIER_COOKIE, "", cookieOptions(0));
+  }
+
+  // verifier가 없으면(쿠키 만료 등) 백엔드도 교환을 거절하므로 바로 실패로 넘긴다.
+  if (code && verifier) {
+    const body: OAuthExchangeRequest = { code, verifier };
 
     try {
       const tokens = await requestBackend<TokenResponse>(
         "/api/auth/oauth/exchange",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(verifier
-              ? { Cookie: `${OAUTH_CODE_VERIFIER_COOKIE}=${verifier}` }
-              : {}),
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
       );
