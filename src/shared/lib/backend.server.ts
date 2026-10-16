@@ -45,7 +45,7 @@ export function backendBaseUrl(): string {
  * 백엔드의 401이고, 쿠키는 값을 담는 그릇이다.
  * refreshToken만 maxAge를 둬서 브라우저 재시작 후에도 세션이 이어지게 한다.
  */
-function cookieOptions(maxAge?: number) {
+export function cookieOptions(maxAge?: number) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
