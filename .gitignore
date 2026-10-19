@@ -45,3 +45,10 @@ next-env.d.ts
 
 # local notes
 Troubleshoot.md
+
+# dev docs (AI agent instructions, architecture notes, phase tracking)
+CLAUDE.md
+AGENTS.md
+blueprint.md
+phase.md
+.claude/rules/
