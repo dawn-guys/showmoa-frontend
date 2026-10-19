@@ -10,8 +10,13 @@ import { useLogout } from "@/shared/hooks/useLogout";
 import { useWithdraw } from "../_hooks/use-withdraw";
 import { MODAL_CONFIRM, MODAL_DESCRIPTION, MODAL_TITLE } from "./withdraw-form";
 
-// 인증 번호 단계 안내 문구. docs/spec에 회원 탈퇴 스펙 문서가 없어 요청받은
-// 문구를 그대로 쓴다(스펙이 생기면 그쪽으로 옮긴다).
+// 이메일·인증 번호 단계 안내 문구. docs/spec에 회원 탈퇴 스펙 문서가 없어
+// 요청받은 문구를 그대로 쓴다(스펙이 생기면 그쪽으로 옮긴다).
+// 이메일이 고정돼 입력할 값이 없으므로, 이메일 단계는 발송 버튼을 누르도록 안내한다.
+const EMAIL_COPY = {
+  sub: "이메일로 인증 번호를 발송해 주세요",
+};
+
 const CODE_COPY = {
   main: "이메일로 인증번호를 발송 했습니다",
   sub: "회원 탈퇴를 위해 메일로 전송 된 인증번호를 작성해 주세요",
@@ -25,9 +30,10 @@ interface SocialWithdrawFormProps {
 
 /**
  * 회원 탈퇴 폼(소셜 계정). 비밀번호가 없어 이메일 인증으로 본인을 확인한다.
- * 진입하자마자 계정 이메일로 인증 메일을 보내고(purpose WITHDRAWAL), 인증 번호
- * 검증에 성공하면 일반 계정과 같은 확인 모달을 띄운다. 모달에서 확정해야 탈퇴
- * 요청이 나간다. 인증 UI·타이머·토스트는 이메일 인증 공통 블록을 그대로 쓴다.
+ * 인증 메일 발송 버튼을 눌러야 계정 이메일로 인증 메일을 보낸다(purpose
+ * WITHDRAWAL). 진입만으로는 보내지 않아, 실수로 들어왔다 나가도 메일이 가지
+ * 않고 재발송 제한에도 걸리지 않는다. 인증 번호 검증에 성공하면 일반 계정과
+ * 같은 확인 모달을 띄운다. 모달에서 확정해야 탈퇴 요청이 나간다. 인증 UI·타이머·토스트는 이메일 인증 공통 블록을 그대로 쓴다.
  *
  * 인증 통과 여부는 이 컴포넌트의 상태로만 들고 있어, 중간에 나갔다 다시 들어오면
  * 인증부터 다시 받는다.
@@ -86,7 +92,7 @@ export function SocialWithdrawForm({ email }: SocialWithdrawFormProps) {
         <EmailVerification
           purpose="WITHDRAWAL"
           fixedEmail={email}
-          autoSend
+          emailCopy={EMAIL_COPY}
           codeCopy={CODE_COPY}
           onVerified={handleVerified}
         />
