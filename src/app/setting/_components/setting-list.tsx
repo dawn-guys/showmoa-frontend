@@ -80,7 +80,10 @@ export function SettingList() {
                 <p className="flex min-h-11 items-center text-body1 font-[300] [overflow-wrap:anywhere] text-foreground">
                   {user?.email}
                 </p>
-                <SettingRow label="비밀번호 변경" href="/password/update" />
+                {/* 소셜 계정은 비밀번호가 없어 비밀번호 변경을 지원하지 않는다. */}
+                {user?.hasPassword && (
+                  <SettingRow label="비밀번호 변경" href="/password/update" />
+                )}
                 <SettingRow label="회원 탈퇴" href="/setting/withdraw" />
                 <SettingRow
                   label="로그아웃"

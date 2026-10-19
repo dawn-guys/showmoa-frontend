@@ -30,9 +30,17 @@ export default function UpdatePasswordPage() {
   if (user && account === null) setAccount(user);
   const current = account ?? user;
 
+  // 소셜 계정은 비밀번호가 없어 비밀번호 변경을 지원하지 않는다. URL로 직접
+  // 들어오면 설정 화면으로 돌려보낸다(proxy.ts는 쿠키만 봐서 계정 유형을 모른다).
+  const isSocial = !!current && !current.hasPassword;
+  React.useEffect(() => {
+    if (isSocial) router.replace("/setting");
+  }, [isSocial, router]);
+
   // 현재 계정 이메일이 확정돼야 인증 대상을 고정할 수 있어, 세션 확인이 끝날
-  // 때까지 기다린다(docs/spec/common-ui.md · 로딩 스피너).
-  if (isLoading && !current) {
+  // 때까지 기다린다(docs/spec/common-ui.md · 로딩 스피너). 소셜 계정은 이동하는
+  // 동안 스피너를 유지해 인증 메일이 자동 발송되지 않게 한다.
+  if ((isLoading && !current) || isSocial) {
     return (
       <div className="flex min-h-dvh flex-col pb-safe">
         <AppBar title="비밀번호 변경" />

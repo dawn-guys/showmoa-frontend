@@ -5,13 +5,15 @@ import { AppBar } from "@/app/_components/app-bar";
 import { EmailVerification } from "@/shared/components/email-verification";
 import { PasswordSetup } from "@/shared/components/password-setup";
 import { AnimatedToast } from "@/shared/components/toast";
-import { isApiError } from "@/shared/lib/api-error";
+import { hasErrorType, isApiError } from "@/shared/lib/api-error";
 import { usePasswordResetFunnel } from "../_hooks/use-password-reset-funnel";
 import { usePasswordReset } from "../_hooks/use-password-reset";
 
 // 재설정 실패 토스트 문구. docs/spec/auth.md에 이 경우의 문구가 없어 이메일
 // 요청 실패 문구를 재사용한다(소유자 결정). 상태 코드로 문구를 나누지 않는다.
 const RESET_ERROR = "유효하지 않은 이메일 입니다";
+// 새 비밀번호가 기존과 같은 경우(400 same-as-old-password)만 문구를 따로 쓴다(소유자 결정).
+const SAME_PASSWORD_ERROR = "기존 비밀번호와 다른 비밀번호를 사용해 주세요";
 
 const TOAST_ID = "password-reset-error-toast";
 
@@ -20,8 +22,8 @@ interface PasswordResetFlowProps {
   title: string;
   /**
    * 인증할 이메일을 고정한다(비밀번호 변경). 넘기면 이메일 인풋이 수정 불가가
-   * 되고, 입력할 값이 없으므로 진입하자마자 인증 메일을 자동 발송한다(회원
-   * 탈퇴와 동일). 고정해도 인증 단계 자체는 건너뛰지 않는다.
+   * 되고, 입력할 값이 없으므로 진입하자마자 인증 메일을 자동 발송한다
+   * (docs/spec/auth.md). 고정해도 인증 단계 자체는 건너뛰지 않는다.
    */
   fixedEmail?: string;
   /**
@@ -88,9 +90,15 @@ export function PasswordResetFlow({
       await resetPassword({ email: verifiedEmail, newPassword });
     } catch (error) {
       setResetFailed(true);
+      // 새 비밀번호가 기존과 같은 경우(400 same-as-old-password)는 비밀번호만
+      // 문제라, 비밀번호 단계에 남아 다른 비밀번호로 다시 시도하게 한다.
+      if (hasErrorType(error, "same-as-old-password")) {
+        setToast(SAME_PASSWORD_ERROR);
+        return;
+      }
       setToast(RESET_ERROR);
-      // 400은 이메일 인증이 만료됐거나 이미 소모된 경우다(형식·비밀번호 규칙
-      // 위반은 화면 검증이 더 엄격해 여기까지 오지 않는다). 인증이 풀렸으면
+      // 그 밖의 400은 이메일 인증이 만료됐거나 이미 소모된 경우다(형식·비밀번호
+      // 규칙 위반은 화면 검증이 더 엄격해 여기까지 오지 않는다). 인증이 풀렸으면
       // 비밀번호 단계에 남아 있어도 다시 시도할 수 없으므로 이메일 인증
       // 단계로 되돌린다.
       if (isApiError(error) && error.status === 400) {
