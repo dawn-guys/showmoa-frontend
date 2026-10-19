@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 쇼모아 (show moa) — Frontend
 
-## Getting Started
+> 흩어진 공연 정보를 **발견 → 찜 → 캘린더 → 예매처 이동** 하나의 흐름으로 묶은 모바일 공연 탐색 웹앱
 
-First, run the development server:
+## 1. 프로젝트 소개
+
+공연 정보는 공연장, 예매처, 검색 포털, SNS에 흩어져 있어 "이번 주말에 갈 만한 공연"이나 "집 근처 극장에서 하는 공연"처럼 탐색하는 질문에 답을 얻기 어렵습니다. 쇼모아는 이 과정을 발견 → 저장 → 일정 관리 → 예매처 이동의 한 흐름으로 줄입니다.
+
+이 저장소는 쇼모아의 프론트엔드입니다. 공연 탐색·지도·찜·캘린더·상세 화면을 모바일 웹으로 제공합니다. 공연 데이터 동기화와 API는 별도의 백엔드 저장소에서 다룹니다.
+
+| 기능   | 설명                                                        |
+| ------ | ----------------------------------------------------------- |
+| 탐색   | 장르·지역·날짜·인기 기준 공연 목록, 검색                    |
+| 지도   | 주변 공연장과 현재 라인업                                   |
+| 찜     | 관심 공연 저장, 진행·예정 공연 우선 정렬                    |
+| 캘린더 | 찜한 공연을 실제 공연하는 날짜에만 표시 (요일·공휴일 반영) |
+| 상세   | 공연 정보, 공유, 공식 예매처로 이동                         |
+
+## 2. 개발 기간 및 팀원 구성
+
+| 항목      | 내용                             |
+| --------- | -------------------------------- |
+| 개발 기간 | 2026.08.14 ~ 진행 중 (기획 포함) |
+| 팀 구성   | 4명                              |
+
+| 이름   | 역할                     | 담당                                                                                   |
+| ------ | ------------------------ | -------------------------------------------------------------------------------------- |
+| 곽다윗 | PO                       | 요구사항 정의, 우선순위, 의사결정 기록, 공연·예술 도메인 지식, 지도 기반 탐색 API       |
+| 양덕관 | CTO                      | API 설계, KOPIS 데이터 수집·동기화, 실행 환경·설정, 서버 배포·운영, 모니터링·성능 측정 |
+| 이준호 | 프론트엔드·디자인·백엔드 | 화면 설계, 사용자 인터랙션 구현, 찜·캘린더 API                                         |
+| 장준영 | 백엔드·QA                | 공연 검색·조회 API, 회원 관리·인증, UI/UX와 품질 확인, 테스트                          |
+
+## 3. 기술 스택
+
+Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui
+TanStack Query · nuqs · Zustand · React Hook Form + Zod · Naver Maps API · Vercel
+
+## 4. 구현 포인트
+
+- **BFF 프록시 인증**: 토큰을 httpOnly 쿠키에 보관하고, Next.js Route Handler가 백엔드 요청을 중계합니다. 401이면 토큰을 자동으로 갱신한 뒤 요청을 다시 보냅니다.
+- **실제 공연일 캘린더**: 공연 기간 전체가 아니라 공연 요일과 공휴일을 반영한 날짜에만 표시합니다.
+- **URL 기반 상태**: 필터와 오버레이 열림 상태를 URL에 두어, 새로고침해도 필터가 유지되고 모바일 뒤로가기로 오버레이가 닫힙니다.
+- **모바일 전용 레이아웃**: 320–480px을 기준으로 하고, 폭 분기는 CSS로만 처리해 하이드레이션 불일치를 막았습니다.
+
+## 5. 시작하기
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.local.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| 환경 변수                         | 설명                                |
+| --------------------------------- | ----------------------------------- |
+| `NEXT_PUBLIC_NAVER_MAP_CLIENT_ID` | 네이버 지도 클라이언트 ID           |
+| `NAVER_API_HUB_CLIENT_ID`         | 네이버 API HUB 클라이언트 ID (랜드마크 API) |
+| `NAVER_API_HUB_CLIENT_SECRET`     | 네이버 API HUB 클라이언트 시크릿 (랜드마크 API) |
+| `BACKEND_API_URL`                 | 백엔드 주소 (비우면 개발 서버 사용) |
